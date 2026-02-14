@@ -10,6 +10,8 @@ internal class TreeFormatterFactory
         {
             OutputFormat.Ascii => new AsciiTreeFormatter(),
             OutputFormat.Markdown => new MarkdownTreeFormatter(),
+            OutputFormat.Unicode => new UnicodeTreeFormatter(),
+
             _ => throw new NotSupportedException($"Unsupported format: {format}")
         };
     }
