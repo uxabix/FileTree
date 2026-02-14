@@ -4,5 +4,5 @@ namespace FileTree.Core.Filtering;
 
 internal interface IFilterEngine
 {
-    void Apply(FileNode root, FilterContext context);
+    FileNode Apply(FileNode root, FilterContext context);
 }
