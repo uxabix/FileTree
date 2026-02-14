@@ -1,15 +1,15 @@
-﻿using System.Text;
+using System.Text;
 using FileTree.Core.Models;
 namespace FileTree.Core.Formatting;
 
-public class AsciiTreeFormatter : ITreeFormatter
+public class UnicodeTreeFormatter : ITreeFormatter
 {
 
     public string Format(FileNode root)
     {
         var sb = new StringBuilder();
         sb.AppendLine(root.Name);
-        TreeFormatter.Build(root, sb, "", "`-- ", "|-- ", " ", "|   ");
+        TreeFormatter.Build(root, sb, "", "└─ ", "├─ ", " ", "│   ");
         return sb.ToString();
     }
 }
