@@ -3,7 +3,7 @@ using FileTree.Core.Models;
 
 namespace FileTree.Core.Formatting;
 
-public class MarkdownTreeFormatter : ITreeFormatter
+internal class MarkdownTreeFormatter : ITreeFormatter
 {
     public string Format(FileNode root)
     {

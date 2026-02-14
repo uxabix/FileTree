@@ -2,7 +2,7 @@
 using FileTree.Core.Models;
 namespace FileTree.Core.Formatting;
 
-public class AsciiTreeFormatter : ITreeFormatter
+internal class AsciiTreeFormatter : ITreeFormatter
 {
 
     public string Format(FileNode root)

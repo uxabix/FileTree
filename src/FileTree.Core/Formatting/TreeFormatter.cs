@@ -2,7 +2,7 @@ using System.Text;
 using FileTree.Core.Models;
 namespace FileTree.Core.Formatting;
 
-public class TreeFormatter
+internal class TreeFormatter
 {
     static public void Build(FileNode node, StringBuilder sb, string prefix, string lastHorizontalSepparator, string horizontalSepparator, string lastVerticalSepparator, string verticalSepparator)
     {
