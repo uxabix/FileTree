@@ -7,8 +7,11 @@ internal class FilterEngine : IFilterEngine
     public FileNode Apply(FileNode root, FilterContext context)
     {
         var filtered = FilterNode(root, context);
-
-        return filtered ?? root;
+        if (filtered == null)
+        {
+            return new FileNode(root.Name, root.FullPath, root.IsDirectory);
+        }
+        return filtered;
     }
 
     private FileNode? FilterNode(FileNode node, FilterContext context)
@@ -32,7 +35,7 @@ internal class FilterEngine : IFilterEngine
         }
         
         if (context.Options.IgnoreEmptyFolders &&
-            !newNode.Children.Any())
+            !newNode.Children.Any() && newNode.IsDirectory)
         {
             return null;
         }
@@ -51,10 +54,8 @@ internal class FilterEngine : IFilterEngine
         {
             var extension = Path.GetExtension(node.Name);
 
-            if (options.IncludeExtensions.Count > 0 &&
-                !options.IncludeExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
-                return false;
-
+            if (options.IncludeExtensions.Any())
+                return options.IncludeExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase);
             if (options.ExcludeExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
                 return false;
         }

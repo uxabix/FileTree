@@ -6,4 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>FileTree.Core.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <InternalsVisibleTo Include="FileTree.Core.Tests"/>
+  </ItemGroup>
 </Project>

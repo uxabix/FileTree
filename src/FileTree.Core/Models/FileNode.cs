@@ -1,6 +1,6 @@
 ﻿namespace FileTree.Core.Models;
 
-internal class FileNode
+public class FileNode
 {
     public string Name { get; }
     public string FullPath { get; }
