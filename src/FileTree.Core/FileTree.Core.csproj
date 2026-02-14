@@ -6,15 +6,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Folder Include="Abstractions\" />
-    <Folder Include="Filtering\" />
-    <Folder Include="Formatting\" />
-    <Folder Include="GitIgnore\" />
-    <Folder Include="Models\" />
-    <Folder Include="Scanning\" />
-    <Folder Include="Services\" />
-    <Folder Include="Utilities\" />
-  </ItemGroup>
-
 </Project>
