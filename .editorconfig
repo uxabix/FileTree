@@ -1,0 +1,8 @@
+﻿root = true
+
+[*]
+indent_style = space
+indent_size = 4
+
+[*.cs]
+dotnet_sort_system_directives_first = true
