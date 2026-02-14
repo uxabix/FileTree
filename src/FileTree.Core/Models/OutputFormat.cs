@@ -3,5 +3,6 @@
 public enum OutputFormat
 {
     Ascii,
-    Markdown
+    Markdown,
+    Unicode
 }
