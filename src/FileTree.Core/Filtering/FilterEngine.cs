@@ -7,10 +7,7 @@ internal class FilterEngine : IFilterEngine
     public FileNode Apply(FileNode root, FilterContext context)
     {
         var filtered = FilterNode(root, context);
-        if (filtered == null)
-        {
-            return new FileNode(root.Name, root.FullPath, root.IsDirectory);
-        }
+        if (filtered == null) return new FileNode(root.Name, root.FullPath, root.IsDirectory);
         return filtered;
     }
 
@@ -22,23 +19,16 @@ internal class FilterEngine : IFilterEngine
         var newNode = new FileNode(node.Name, node.FullPath, node.IsDirectory);
 
         if (node.IsDirectory)
-        {
             foreach (var child in node.Children)
             {
                 var filteredChild = FilterNode(child, context);
 
-                if (filteredChild != null)
-                {
-                    newNode.AddChild(filteredChild);
-                }
+                if (filteredChild != null) newNode.AddChild(filteredChild);
             }
-        }
-        
+
         if (context.Options.IgnoreEmptyFolders &&
             !newNode.Children.Any() && newNode.IsDirectory)
-        {
             return null;
-        }
 
         return newNode;
     }
