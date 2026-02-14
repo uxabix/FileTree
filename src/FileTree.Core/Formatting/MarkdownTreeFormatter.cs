@@ -20,9 +20,6 @@ internal class MarkdownTreeFormatter : ITreeFormatter
 
         sb.AppendLine(indent + name);
 
-        foreach (var child in node.Children)
-        {
-            WriteNode(child, sb, depth + 1);
-        }
+        foreach (var child in node.Children) WriteNode(child, sb, depth + 1);
     }
 }

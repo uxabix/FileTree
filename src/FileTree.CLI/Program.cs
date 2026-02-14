@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-
-class Program
+﻿internal class Program
 {
-    static void Main()
+    private static void Main()
     {
         Console.WriteLine("Hello");
         Console.ReadKey();
