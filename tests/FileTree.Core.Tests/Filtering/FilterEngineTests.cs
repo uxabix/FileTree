@@ -1,6 +1,6 @@
-﻿using FileTree.Core.Models;
+﻿using FileTree.Core.Filtering;
+using FileTree.Core.Models;
 using FileTree.Core.Tests.Fixtures;
-using FileTree.Core.Filtering;
 using Xunit.Abstractions;
 
 namespace FileTree.Core.Tests.Filtering;
@@ -66,7 +66,7 @@ public class FilterEngineTests : IClassFixture<TestTreeFixture>
         var result = _engine.Apply(root, context);
 
         // Assert
-        var bin = Enumerable.First<FileNode>(result.Children, c => c.Name == "bin");
+        var bin = result.Children.First(c => c.Name == "bin");
         Assert.Empty(bin.Children);
     }
 
@@ -90,17 +90,17 @@ public class FilterEngineTests : IClassFixture<TestTreeFixture>
         PrintTree(result);
         // Assert
         // bin has app.exe, should be empty (but folder remains because IgnoreEmptyFolders=false)
-        var bin = Enumerable.First<FileNode>(result.Children, c => c.Name == "bin");
+        var bin = result.Children.First(c => c.Name == "bin");
         Assert.Empty(bin.Children);
 
         // src has main.cs, utils.cs and docs/readme.md. docs should be empty.
-        var src = Enumerable.First<FileNode>(result.Children, c => c.Name == "src");
+        var src = result.Children.First(c => c.Name == "src");
         Assert.Contains(src.Children, c => c.Name == "main.cs");
         Assert.Contains(src.Children, c => c.Name == "utils.cs");
         var docs = src.Children.First(c => c.Name == "docs");
         Assert.Empty(docs.Children);
 
-        Assert.Null(Enumerable.FirstOrDefault<FileNode>(result.Children, c => c.Name == "config.json"));
+        Assert.Null(result.Children.FirstOrDefault(c => c.Name == "config.json"));
     }
 
     [Fact]
@@ -122,11 +122,11 @@ public class FilterEngineTests : IClassFixture<TestTreeFixture>
         PrintTree(result);
 
         // Assert
-        Assert.DoesNotContain<FileNode>(result.Children, c => c.Name == "bin");
-        Assert.DoesNotContain<FileNode>(result.Children, c => c.Name == "temp");
-        Assert.DoesNotContain<FileNode>(result.Children, c => c.Name == "config.json");
+        Assert.DoesNotContain(result.Children, c => c.Name == "bin");
+        Assert.DoesNotContain(result.Children, c => c.Name == "temp");
+        Assert.DoesNotContain(result.Children, c => c.Name == "config.json");
 
-        var src = Enumerable.FirstOrDefault<FileNode>(result.Children, c => c.Name == "src");
+        var src = result.Children.FirstOrDefault(c => c.Name == "src");
         Assert.NotNull(src);
         Assert.DoesNotContain(src.Children, c => c.Name == "docs");
     }
@@ -150,9 +150,9 @@ public class FilterEngineTests : IClassFixture<TestTreeFixture>
         var result = _engine.Apply(root, context);
 
         // Assert
-        Assert.DoesNotContain<FileNode>(result.Children, c => c.Name == "src");
-        Assert.DoesNotContain<FileNode>(result.Children, c => c.Name == "config.json");
-        Assert.Contains<FileNode>(result.Children, c => c.Name == "bin");
+        Assert.DoesNotContain(result.Children, c => c.Name == "src");
+        Assert.DoesNotContain(result.Children, c => c.Name == "config.json");
+        Assert.Contains(result.Children, c => c.Name == "bin");
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class FilterEngineTests : IClassFixture<TestTreeFixture>
         var result = _engine.Apply(root, context);
 
         // Assert
-        var bin = Enumerable.First<FileNode>(result.Children, c => c.Name == "bin");
+        var bin = result.Children.First(c => c.Name == "bin");
         Assert.Contains(bin.Children, c => c.Name == "app.exe");
     }
 }

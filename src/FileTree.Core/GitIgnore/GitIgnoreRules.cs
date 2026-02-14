@@ -1,6 +1,6 @@
 ﻿namespace FileTree.Core.GitIgnore;
 
-public class GitIgnoreRules
+internal class GitIgnoreRules
 {
     public bool IsIgnored(string relativePath)
     {

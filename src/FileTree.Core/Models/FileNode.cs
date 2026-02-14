@@ -1,6 +1,6 @@
 ﻿namespace FileTree.Core.Models;
 
-public class FileNode
+internal class FileNode
 {
     private readonly List<FileNode> _children = new();
 
