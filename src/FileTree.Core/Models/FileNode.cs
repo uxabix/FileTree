@@ -1,4 +1,6 @@
-﻿namespace FileTree.Core.Models;
+﻿using System.Collections.Generic;
+
+namespace FileTree.Core.Models;
 
 internal class FileNode
 {
