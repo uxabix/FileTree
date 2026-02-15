@@ -42,8 +42,7 @@ namespace FileTree.Core.Scanning
             if (item.Attributes.HasFlag(FileAttributes.Hidden))
                 return true;
 
-            if (item.Name.StartsWith("."))
-                return true;
+            //To do linux hiden files
 
             return false;
         }
