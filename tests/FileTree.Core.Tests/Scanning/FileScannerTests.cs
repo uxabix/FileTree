@@ -45,14 +45,15 @@ namespace FileTree.Tests.Scanning
 
             return new FileTreeOptions
             {
-                MaxDepth = overrides.MaxDepth != -1 ? overrides.MaxDepth : baseOptions.MaxDepth,
-                MaxWidth = overrides.MaxWidth != -1 ? overrides.MaxWidth : baseOptions.MaxWidth,
-                MaxNodes = overrides.MaxNodes != -1 ? overrides.MaxNodes : baseOptions.MaxNodes,
+                MaxDepth = overrides.MaxDepth != 0 ? overrides.MaxDepth : baseOptions.MaxDepth,
+                MaxWidth = overrides.MaxWidth != 0 ? overrides.MaxWidth : baseOptions.MaxWidth,
+                MaxNodes = overrides.MaxNodes != 0 ? overrides.MaxNodes : baseOptions.MaxNodes,
                 UseGitIgnore = overrides.UseGitIgnore,
                 Format = overrides.Format,
                 Filter = overrides.Filter
             };
         }
+
 
         [Fact]
         public void Scan_ShouldFindFilesAndFolders()
