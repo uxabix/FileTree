@@ -23,6 +23,17 @@ namespace FileTree.Core.Scanning
             return rootNode;
         }
 
+        private bool IsHidden(FileSystemInfo item)
+        {
+            if (item.Attributes.HasFlag(FileAttributes.Hidden))
+                return true;
+
+            if (item.Name.StartsWith("."))
+                return true;
+
+            return false;
+        }
+
         private void PerformScan(DirectoryInfo dirInfo, FileNode parentNode, int currentDepth, FileTreeOptions options)
         {
             if (options.MaxDepth != -1 && currentDepth >= options.MaxDepth)
@@ -49,6 +60,9 @@ namespace FileTree.Core.Scanning
             {
                 if (options.MaxNodes != -1 && _nodeCount >= options.MaxNodes)
                     break;
+
+                if (options.Hidden && IsHidden(item)) 
+                    continue;
 
                 if (item.Attributes.HasFlag(FileAttributes.ReparsePoint))
                     continue;
