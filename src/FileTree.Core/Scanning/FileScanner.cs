@@ -1,72 +1,84 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using FileTree.Core.Models;
 
 namespace FileTree.Core.Scanning
 {
     internal class FileScanner : IFileScanner
     {
-        public int MaxDepth { get; init; } = -1;
-        public int MaxWidth { get; init; } = -1;
-        public int MaxNodes { get; init; } = -1;
+        public int MaxDepth { get; init; }
+        public int MaxWidth { get; init; }
+        public int MaxNodes { get; init; }
 
-        private int _nodeCount;
-        private bool _stopScan;
+        private int _nodeCount = 0;
+
+        public FileScanner(FileTreeOptions options)
+        {
+            MaxDepth = options.MaxDepth;
+            MaxWidth = options.MaxWidth;
+            MaxNodes = options.MaxNodes;
+        }
+
+        public FileScanner()
+        {
+            MaxDepth = -1;
+            MaxWidth = -1;
+            MaxNodes = -1;
+        }
 
         public FileNode Scan(string rootPath)
         {
             if (!Directory.Exists(rootPath))
                 throw new DirectoryNotFoundException(rootPath);
 
+            _nodeCount = 0;
+
             var rootInfo = new DirectoryInfo(rootPath);
             var rootNode = new FileNode(rootInfo.Name, rootInfo.FullName, true);
 
-            _nodeCount = 1; // корневой узел
-            _stopScan = false;
-
             PerformScan(rootInfo, rootNode, 0);
+
             return rootNode;
         }
 
         private void PerformScan(DirectoryInfo dirInfo, FileNode parentNode, int currentDepth)
         {
-            if (_stopScan) return;
-            if (MaxDepth != -1 && currentDepth >= MaxDepth) return;
+            if (MaxDepth != -1 && currentDepth >= MaxDepth)
+                return;
+
+            FileSystemInfo[] items;
 
             try
             {
-                int childrenAdded = 0;
-                foreach (var item in dirInfo.GetFileSystemInfos())
-                {
-                    if (_stopScan) break;
-
-                    if (MaxWidth != -1 && childrenAdded >= MaxWidth)
-                        break;
-
-                    if (MaxNodes != -1 && _nodeCount >= MaxNodes)
-                    {
-                        _stopScan = true;
-                        break;
-                    }
-
-                    if (item.Attributes.HasFlag(FileAttributes.ReparsePoint))
-                        continue;
-
-                    bool isDir = item is DirectoryInfo;
-                    var node = new FileNode(item.Name, item.FullName, isDir);
-                    parentNode.AddChild(node);
-                    _nodeCount++;
-                    childrenAdded++;
-
-                    if (isDir)
-                    {
-                        PerformScan((DirectoryInfo)item, node, currentDepth + 1);
-                    }
-                }
+                items = dirInfo.GetFileSystemInfos();
             }
             catch (UnauthorizedAccessException)
             {
+                return;
+            }
 
+            if (MaxWidth != -1)
+                items = items.Take(MaxWidth).ToArray();
+
+            foreach (var item in items)
+            {
+                if (item.Attributes.HasFlag(FileAttributes.ReparsePoint))
+                    continue;
+
+                if (MaxNodes != -1 && _nodeCount >= MaxNodes)
+                    return;
+
+                bool isDir = item is DirectoryInfo;
+                var node = new FileNode(item.Name, item.FullName, isDir);
+                parentNode.AddChild(node);
+
+                _nodeCount++;
+
+                if (isDir)
+                {
+                    PerformScan((DirectoryInfo)item, node, currentDepth + 1);
+                }
             }
         }
     }
