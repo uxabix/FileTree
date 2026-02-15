@@ -1,4 +1,4 @@
-﻿using FileTree.Core.Abstruction;
+﻿using FileTree.Core.Abstractions;
 using FileTree.Core.Filtering;
 using FileTree.Core.Formatting;
 using FileTree.Core.GitIgnore;
