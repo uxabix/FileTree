@@ -13,7 +13,7 @@ public class FileTreeService : IFileTreeService
     private readonly IFilterEngine _filterEngine;
     private readonly TreeFormatterFactory _formatterFactory;
 
-    public FileTreeService(
+    internal FileTreeService(
         IFileScanner scanner,
         IFilterEngine filterEngine,
         TreeFormatterFactory formatterFactory)
@@ -21,6 +21,11 @@ public class FileTreeService : IFileTreeService
         _scanner = scanner;
         _filterEngine = filterEngine;
         _formatterFactory = formatterFactory;
+    }
+
+    public FileTreeService() : this(new FileScanner(), new FilterEngine(), new TreeFormatterFactory())
+    {
+        
     }
 
     public string Generate(string rootPath, FileTreeOptions options)
@@ -31,8 +36,8 @@ public class FileTreeService : IFileTreeService
         if (options.UseGitIgnore)
         {
             var gitIgnorePath = Path.Combine(rootPath, ".gitignore");
-            if (File.Exists(gitIgnorePath))
-                gitIgnore = GitIgnoreParser.Parse(File.ReadAllLines(gitIgnorePath));
+            // if (File.Exists(gitIgnorePath))
+            //     gitIgnore = GitIgnoreParser.Parse(File.ReadAllLines(gitIgnorePath));
         }
 
         var context = new FilterContext(options.Filter, gitIgnore);
