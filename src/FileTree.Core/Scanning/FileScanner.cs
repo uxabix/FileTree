@@ -7,27 +7,9 @@ namespace FileTree.Core.Scanning
 {
     internal class FileScanner : IFileScanner
     {
-        public int MaxDepth { get; init; }
-        public int MaxWidth { get; init; }
-        public int MaxNodes { get; init; }
+        private int _nodeCount;
 
-        private int _nodeCount = 0;
-
-        public FileScanner(FileTreeOptions options)
-        {
-            MaxDepth = options.MaxDepth;
-            MaxWidth = options.MaxWidth;
-            MaxNodes = options.MaxNodes;
-        }
-
-        public FileScanner()
-        {
-            MaxDepth = -1;
-            MaxWidth = -1;
-            MaxNodes = -1;
-        }
-
-        public FileNode Scan(string rootPath)
+        public FileNode Scan(string rootPath, FileTreeOptions options)
         {
             if (!Directory.Exists(rootPath))
                 throw new DirectoryNotFoundException(rootPath);
@@ -37,14 +19,16 @@ namespace FileTree.Core.Scanning
             var rootInfo = new DirectoryInfo(rootPath);
             var rootNode = new FileNode(rootInfo.Name, rootInfo.FullName, true);
 
-            PerformScan(rootInfo, rootNode, 0);
-
+            PerformScan(rootInfo, rootNode, 0, options);
             return rootNode;
         }
 
-        private void PerformScan(DirectoryInfo dirInfo, FileNode parentNode, int currentDepth)
+        private void PerformScan(DirectoryInfo dirInfo, FileNode parentNode, int currentDepth, FileTreeOptions options)
         {
-            if (MaxDepth != -1 && currentDepth >= MaxDepth)
+            if (options.MaxDepth != -1 && currentDepth >= options.MaxDepth)
+                return;
+
+            if (options.MaxNodes != -1 && _nodeCount >= options.MaxNodes)
                 return;
 
             FileSystemInfo[] items;
@@ -58,26 +42,26 @@ namespace FileTree.Core.Scanning
                 return;
             }
 
-            if (MaxWidth != -1)
-                items = items.Take(MaxWidth).ToArray();
+            if (options.MaxWidth != -1)
+                items = items.Take(options.MaxWidth).ToArray();
 
             foreach (var item in items)
             {
+                if (options.MaxNodes != -1 && _nodeCount >= options.MaxNodes)
+                    break;
+
                 if (item.Attributes.HasFlag(FileAttributes.ReparsePoint))
                     continue;
 
-                if (MaxNodes != -1 && _nodeCount >= MaxNodes)
-                    return;
-
                 bool isDir = item is DirectoryInfo;
                 var node = new FileNode(item.Name, item.FullName, isDir);
-                parentNode.AddChild(node);
 
+                parentNode.AddChild(node);
                 _nodeCount++;
 
                 if (isDir)
                 {
-                    PerformScan((DirectoryInfo)item, node, currentDepth + 1);
+                    PerformScan((DirectoryInfo)item, node, currentDepth + 1, options);
                 }
             }
         }

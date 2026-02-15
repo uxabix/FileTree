@@ -5,16 +5,19 @@ using Xunit;
 using FileTree.Core.Scanning;
 using FileTree.Core.Models;
 
-namespace FileTree.Core.Tests.Scanning
+namespace FileTree.Tests.Scanning
 {
     public class FileScannerTests : IDisposable
     {
         private readonly string _tempRoot;
+        private readonly FileScanner _scanner;
 
         public FileScannerTests()
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "FileTreeTest_" + Guid.NewGuid());
             Directory.CreateDirectory(_tempRoot);
+
+            _scanner = new FileScanner();
         }
 
         public void Dispose()
@@ -25,23 +28,45 @@ namespace FileTree.Core.Tests.Scanning
             }
         }
 
+        private FileTreeOptions Options(FileTreeOptions overrides = null)
+        {
+            var baseOptions = new FileTreeOptions
+            {
+                MaxDepth = -1,
+                MaxWidth = -1,
+                MaxNodes = -1,
+                UseGitIgnore = false,
+                Format = OutputFormat.Ascii,
+                Filter = new FilterOptions()
+            };
+
+            if (overrides == null)
+                return baseOptions;
+
+            return new FileTreeOptions
+            {
+                MaxDepth = overrides.MaxDepth != -1 ? overrides.MaxDepth : baseOptions.MaxDepth,
+                MaxWidth = overrides.MaxWidth != -1 ? overrides.MaxWidth : baseOptions.MaxWidth,
+                MaxNodes = overrides.MaxNodes != -1 ? overrides.MaxNodes : baseOptions.MaxNodes,
+                UseGitIgnore = overrides.UseGitIgnore,
+                Format = overrides.Format,
+                Filter = overrides.Filter
+            };
+        }
+
         [Fact]
         public void Scan_ShouldFindFilesAndFolders()
         {
-            // Arrange
             File.WriteAllText(Path.Combine(_tempRoot, "file1.txt"), "dummy content");
             var subFolder = Path.Combine(_tempRoot, "folder1");
             Directory.CreateDirectory(subFolder);
             File.WriteAllText(Path.Combine(subFolder, "file2.txt"), "dummy content");
 
-            var scanner = new FileScanner(); // без ограничений
+            var rootNode = _scanner.Scan(_tempRoot, Options());
 
-            // Act
-            var rootNode = scanner.Scan(_tempRoot);
-
-            // Assert
             Assert.NotNull(rootNode);
             Assert.Equal(Path.GetFileName(_tempRoot), rootNode.Name);
+
             Assert.Equal(2, rootNode.Children.Count);
 
             var fileNode = rootNode.Children.FirstOrDefault(c => c.Name == "file1.txt");
@@ -59,32 +84,52 @@ namespace FileTree.Core.Tests.Scanning
         [Fact]
         public void Scan_ShouldRespectMaxDepth()
         {
-            // Arrange
             var level1 = Path.Combine(_tempRoot, "level1");
             var level2 = Path.Combine(level1, "level2");
             Directory.CreateDirectory(level2);
             File.WriteAllText(Path.Combine(level2, "file.txt"), "hi");
 
-            var scanner = new FileScanner { MaxDepth = 1 };
+            var rootNode = _scanner.Scan(_tempRoot, Options(new FileTreeOptions { MaxDepth = 1 }));
 
-            // Act
-            var rootNode = scanner.Scan(_tempRoot);
-
-            // Assert
             var level1Node = rootNode.Children.FirstOrDefault(c => c.Name == "level1");
             Assert.NotNull(level1Node);
+
             Assert.Empty(level1Node.Children);
+        }
+
+        [Fact]
+        public void Scan_ShouldRespectMaxWidth()
+        {
+            Directory.CreateDirectory(Path.Combine(_tempRoot, "A"));
+            Directory.CreateDirectory(Path.Combine(_tempRoot, "B"));
+            Directory.CreateDirectory(Path.Combine(_tempRoot, "C"));
+
+            var rootNode = _scanner.Scan(_tempRoot, Options(new FileTreeOptions { MaxWidth = 2 }));
+
+            Assert.Equal(2, rootNode.Children.Count);
+        }
+
+        [Fact]
+        public void Scan_ShouldRespectMaxNodes()
+        {
+            Directory.CreateDirectory(Path.Combine(_tempRoot, "A"));
+            Directory.CreateDirectory(Path.Combine(_tempRoot, "B"));
+            Directory.CreateDirectory(Path.Combine(_tempRoot, "C"));
+
+            var rootNode = _scanner.Scan(_tempRoot, Options(new FileTreeOptions { MaxNodes = 2 }));
+
+            Assert.Equal(2, rootNode.Children.Count);
         }
 
         [Fact]
         public void Scan_ShouldThrow_WhenDirectoryNotFound()
         {
-            // Arrange
             string nonExistentPath = Path.Combine(_tempRoot, "GHOST_FOLDER");
-            var scanner = new FileScanner();
 
-            // Act & Assert
-            Assert.Throws<DirectoryNotFoundException>(() => scanner.Scan(nonExistentPath));
+            Assert.Throws<DirectoryNotFoundException>(() =>
+            {
+                _scanner.Scan(nonExistentPath, Options());
+            });
         }
     }
 }
