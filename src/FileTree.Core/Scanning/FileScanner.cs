@@ -1,4 +1,4 @@
-﻿using FileTree.Core.Abstractions;
+using FileTree.Core.Abstractions;
 using System;
 using System.IO;
 using System.Linq;
