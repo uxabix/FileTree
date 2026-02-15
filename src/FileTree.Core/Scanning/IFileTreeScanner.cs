@@ -1,4 +1,4 @@
-﻿using FileTree.Core.Models;
+using FileTree.Core.Models;
 
 namespace FileTree.Core.Scanning;
 
