@@ -1,6 +1,8 @@
-﻿namespace FileTree.Core.Models;
+﻿using System.Collections.Generic;
 
-internal class FileNode
+namespace FileTree.Core.Models;
+
+public class FileNode
 {
     private readonly List<FileNode> _children = new();
 

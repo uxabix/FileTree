@@ -4,5 +4,5 @@ namespace FileTree.Core.Scanning;
 
 internal interface IFileScanner
 {
-    FileNode Scan(string rootPath, int maxDepth);
+    FileNode Scan(string rootPath, FileTreeOptions options);
 }
