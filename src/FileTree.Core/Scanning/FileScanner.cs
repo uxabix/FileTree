@@ -1,14 +1,17 @@
-using FileTree.Core.Abstractions;
+﻿using FileTree.Core.Abstractions;
 using System;
 using System.IO;
 using System.Linq;
 using FileTree.Core.Models;
+using FileTree.Core.GitIgnore;
+
 
 namespace FileTree.Core.Scanning
 {
     internal class FileScanner : IFileScanner
     {
         private int _nodeCount;
+        private GitIgnoreRules? _gitIgnore;
 
         public FileNode Scan(string rootPath, FileTreeOptions options)
         {
@@ -17,11 +20,31 @@ namespace FileTree.Core.Scanning
 
             _nodeCount = 0;
 
+            _gitIgnore = null;
+            if (options.UseGitIgnore)
+            {
+                string gitIgnorePath = Path.Combine(rootPath, ".gitignore");
+                if (File.Exists(gitIgnorePath))
+                {
+                    _gitIgnore = GitIgnoreParser.FromFile(gitIgnorePath);
+                }
+            }
+
             var rootInfo = new DirectoryInfo(rootPath);
             var rootNode = new FileNode(rootInfo.Name, rootInfo.FullName, true);
 
             PerformScan(rootInfo, rootNode, 0, options);
             return rootNode;
+        }
+
+        private bool IsHidden(FileSystemInfo item)
+        {
+            if (item.Attributes.HasFlag(FileAttributes.Hidden))
+                return true;
+
+            //To do linux hiden files
+
+            return false;
         }
 
         private void PerformScan(DirectoryInfo dirInfo, FileNode parentNode, int currentDepth, FileTreeOptions options)
@@ -51,7 +74,13 @@ namespace FileTree.Core.Scanning
                 if (options.MaxNodes != -1 && _nodeCount >= options.MaxNodes)
                     break;
 
+                if (options.Hidden && IsHidden(item)) 
+                    continue;
+
                 if (item.Attributes.HasFlag(FileAttributes.ReparsePoint))
+                    continue;
+
+                if (_gitIgnore != null && _gitIgnore.IsIgnored(item.FullName))
                     continue;
 
                 bool isDir = item is DirectoryInfo;

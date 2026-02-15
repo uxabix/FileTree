@@ -36,6 +36,7 @@ namespace FileTree.Tests.Scanning
                 MaxWidth = -1,
                 MaxNodes = -1,
                 UseGitIgnore = false,
+                Hidden = false,
                 Format = OutputFormat.Ascii,
                 Filter = new FilterOptions()
             };
@@ -45,14 +46,16 @@ namespace FileTree.Tests.Scanning
 
             return new FileTreeOptions
             {
-                MaxDepth = overrides.MaxDepth != -1 ? overrides.MaxDepth : baseOptions.MaxDepth,
-                MaxWidth = overrides.MaxWidth != -1 ? overrides.MaxWidth : baseOptions.MaxWidth,
-                MaxNodes = overrides.MaxNodes != -1 ? overrides.MaxNodes : baseOptions.MaxNodes,
+                MaxDepth = overrides.MaxDepth != 0 ? overrides.MaxDepth : baseOptions.MaxDepth,
+                MaxWidth = overrides.MaxWidth != 0 ? overrides.MaxWidth : baseOptions.MaxWidth,
+                MaxNodes = overrides.MaxNodes != 0 ? overrides.MaxNodes : baseOptions.MaxNodes,
                 UseGitIgnore = overrides.UseGitIgnore,
+                Hidden = overrides.Hidden,
                 Format = overrides.Format,
                 Filter = overrides.Filter
             };
         }
+
 
         [Fact]
         public void Scan_ShouldFindFilesAndFolders()
@@ -130,6 +133,35 @@ namespace FileTree.Tests.Scanning
             {
                 _scanner.Scan(nonExistentPath, Options());
             });
+        }
+        [Fact]
+        public void Scan_ShouldSkipHiddenFiles_WhenSkipHiddenEnabled()
+        {
+            File.WriteAllText(Path.Combine(_tempRoot, "visible.txt"), "hello");
+
+            File.WriteAllText(Path.Combine(_tempRoot, ".hidden.txt"), "secret");
+
+            var hiddenDir = Path.Combine(_tempRoot, ".config");
+            Directory.CreateDirectory(hiddenDir);
+            File.WriteAllText(Path.Combine(hiddenDir, "inside.txt"), "data");
+
+            var options = Options(new FileTreeOptions
+            {
+                Hidden = true
+            });
+
+            var rootNode = _scanner.Scan(_tempRoot, options);
+
+            Assert.NotNull(rootNode);
+
+            Assert.Single(rootNode.Children);
+
+            var visible = rootNode.Children.First();
+            Assert.Equal("visible.txt", visible.Name);
+
+            Assert.DoesNotContain(rootNode.Children, c => c.Name == ".config");
+
+            Assert.DoesNotContain(rootNode.Children, c => c.Name == ".hidden.txt");
         }
     }
 }
