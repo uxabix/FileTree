@@ -40,13 +40,10 @@ namespace FileTree.Core.Scanning
 
         private bool IsHidden(FileSystemInfo item)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                if (item.Attributes.HasFlag(FileAttributes.Hidden))
-                    return true;
-            }
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && item.Attributes.HasFlag(FileAttributes.Hidden))
+                return true;
 
-            if (item.Name.StartsWith("."))
+            else if (item.Name.StartsWith("."))
                 return true;
 
             return false;
