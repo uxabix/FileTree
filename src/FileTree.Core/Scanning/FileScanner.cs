@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using FileTree.Core.Models;
 using FileTree.Core.GitIgnore;
+using System.Runtime.InteropServices;
 
 
 namespace FileTree.Core.Scanning
@@ -39,13 +40,18 @@ namespace FileTree.Core.Scanning
 
         private bool IsHidden(FileSystemInfo item)
         {
-            if (item.Attributes.HasFlag(FileAttributes.Hidden))
-                return true;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                if (item.Attributes.HasFlag(FileAttributes.Hidden))
+                    return true;
+            }
 
-            //To do linux hiden files
+            if (item.Name.StartsWith("."))
+                return true;
 
             return false;
         }
+
 
         private void PerformScan(DirectoryInfo dirInfo, FileNode parentNode, int currentDepth, FileTreeOptions options)
         {
