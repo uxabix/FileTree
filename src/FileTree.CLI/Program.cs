@@ -22,6 +22,7 @@ internal class Program
             MaxWidth = opts.MaxWidth ?? -1,
             MaxNodes = opts.MaxNodes ?? -1,
             UseGitIgnore = opts.UseGitIgnore ?? false,
+            Hidden = opts.Hidden ?? false,
             Format = opts.Format ?? OutputFormat.Ascii,
             Filter = new FilterOptions
             {

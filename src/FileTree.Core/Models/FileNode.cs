@@ -22,4 +22,9 @@ public class FileNode
     {
         _children.Add(child);
     }
+
+    public void RemoveChild(FileNode child)
+    {
+        _children.Remove(child);
+    }
 }

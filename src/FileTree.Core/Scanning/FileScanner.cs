@@ -5,6 +5,7 @@ using System.Linq;
 using FileTree.Core.Models;
 using FileTree.Core.GitIgnore;
 using System.Runtime.InteropServices;
+using FileTree.Core.Filtering;
 
 
 namespace FileTree.Core.Scanning
@@ -13,6 +14,8 @@ namespace FileTree.Core.Scanning
     {
         private int _nodeCount;
         private GitIgnoreRules? _gitIgnore;
+        private IFileFilter? _fileFilter;
+        private bool _ignoreEmptyFolders;
 
         public FileNode Scan(string rootPath, FileTreeOptions options)
         {
@@ -31,6 +34,9 @@ namespace FileTree.Core.Scanning
                 }
             }
 
+            _fileFilter = new FileFilter(options.Filter);
+            _ignoreEmptyFolders = options.Filter.IgnoreEmptyFolders;
+
             var rootInfo = new DirectoryInfo(rootPath);
             var rootNode = new FileNode(rootInfo.Name, rootInfo.FullName, true);
 
@@ -43,7 +49,7 @@ namespace FileTree.Core.Scanning
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && item.Attributes.HasFlag(FileAttributes.Hidden))
                 return true;
 
-            else if (item.Name.StartsWith("."))
+            if (item.Name.StartsWith("."))
                 return true;
 
             return false;
@@ -77,7 +83,7 @@ namespace FileTree.Core.Scanning
                 if (options.MaxNodes != -1 && _nodeCount >= options.MaxNodes)
                     break;
 
-                if (options.Hidden && IsHidden(item)) 
+                if (options.Hidden && IsHidden(item))
                     continue;
 
                 if (item.Attributes.HasFlag(FileAttributes.ReparsePoint))
@@ -87,6 +93,22 @@ namespace FileTree.Core.Scanning
                     continue;
 
                 bool isDir = item is DirectoryInfo;
+
+                // Apply filter
+                if (_fileFilter != null)
+                {
+                    if (isDir)
+                    {
+                        if (!_fileFilter.ShouldIncludeDirectory(item.Name, item.FullName))
+                            continue;
+                    }
+                    else
+                    {
+                        if (!_fileFilter.ShouldIncludeFile(item.Name, item.FullName))
+                            continue;
+                    }
+                }
+
                 var node = new FileNode(item.Name, item.FullName, isDir);
 
                 parentNode.AddChild(node);
@@ -95,6 +117,13 @@ namespace FileTree.Core.Scanning
                 if (isDir)
                 {
                     PerformScan((DirectoryInfo)item, node, currentDepth + 1, options);
+
+                    // Remove empty folders if IgnoreEmptyFolders is enabled
+                    if (_ignoreEmptyFolders && !node.Children.Any())
+                    {
+                        parentNode.RemoveChild(node);
+                        _nodeCount--;
+                    }
                 }
             }
         }
