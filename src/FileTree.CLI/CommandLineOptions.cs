@@ -39,5 +39,5 @@ public class CommandLineOptions
     public bool? IgnoreEmptyFolders { get; set; }
 
     [Option('h', "hidden", HelpText = "Exclude hidden files and folders.", Required = false)]
-    public bool? Hidden { get; set; }
+    public bool? SkipHidden { get; set; }
 }

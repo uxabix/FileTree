@@ -21,8 +21,8 @@ internal class Program
             MaxDepth = opts.MaxDepth ?? -1,
             MaxWidth = opts.MaxWidth ?? -1,
             MaxNodes = opts.MaxNodes ?? -1,
-            UseGitIgnore = opts.UseGitIgnore ?? false,
-            Hidden = opts.Hidden ?? false,
+            UseGitIgnore = opts.UseGitIgnore ?? true,
+            SkipHidden = opts.SkipHidden ?? true,
             Format = opts.Format ?? OutputFormat.Ascii,
             Filter = new FilterOptions
             {

@@ -16,18 +16,20 @@ namespace FileTree.Core.Scanning
         private GitIgnoreRules? _gitIgnore;
         private IFileFilter? _fileFilter;
         private bool _ignoreEmptyFolders;
+        private string _rootPath = string.Empty;
 
         public FileNode Scan(string rootPath, FileTreeOptions options)
         {
             if (!Directory.Exists(rootPath))
                 throw new DirectoryNotFoundException(rootPath);
 
+            _rootPath = Path.GetFullPath(rootPath);
             _nodeCount = 0;
 
             _gitIgnore = null;
             if (options.UseGitIgnore)
             {
-                string gitIgnorePath = Path.Combine(rootPath, ".gitignore");
+                string gitIgnorePath = Path.Combine(_rootPath, ".gitignore");
                 if (File.Exists(gitIgnorePath))
                 {
                     _gitIgnore = GitIgnoreParser.FromFile(gitIgnorePath);
@@ -37,7 +39,7 @@ namespace FileTree.Core.Scanning
             _fileFilter = new FileFilter(options.Filter);
             _ignoreEmptyFolders = options.Filter.IgnoreEmptyFolders;
 
-            var rootInfo = new DirectoryInfo(rootPath);
+            var rootInfo = new DirectoryInfo(_rootPath);
             var rootNode = new FileNode(rootInfo.Name, rootInfo.FullName, true);
 
             PerformScan(rootInfo, rootNode, 0, options);
@@ -83,14 +85,21 @@ namespace FileTree.Core.Scanning
                 if (options.MaxNodes != -1 && _nodeCount >= options.MaxNodes)
                     break;
 
-                if (options.Hidden && IsHidden(item))
+                if (options.SkipHidden && IsHidden(item))
                     continue;
 
                 if (item.Attributes.HasFlag(FileAttributes.ReparsePoint))
                     continue;
 
-                if (_gitIgnore != null && _gitIgnore.IsIgnored(item.FullName))
-                    continue;
+                if (_gitIgnore != null)
+                {
+                    var relativePath = Path.GetRelativePath(_rootPath, item.FullName).Replace('\\', '/');
+                    if (item is DirectoryInfo)
+                        relativePath += "/";
+
+                    if (_gitIgnore.IsIgnored(relativePath))
+                        continue;
+                }
 
                 bool isDir = item is DirectoryInfo;
 

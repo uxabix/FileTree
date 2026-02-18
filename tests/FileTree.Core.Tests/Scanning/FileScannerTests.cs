@@ -36,7 +36,7 @@ namespace FileTree.Tests.Scanning
                 MaxWidth = -1,
                 MaxNodes = -1,
                 UseGitIgnore = false,
-                Hidden = false,
+                SkipHidden = false,
                 Format = OutputFormat.Ascii,
                 Filter = new FilterOptions()
             };
@@ -50,7 +50,7 @@ namespace FileTree.Tests.Scanning
                 MaxWidth = overrides.MaxWidth != 0 ? overrides.MaxWidth : baseOptions.MaxWidth,
                 MaxNodes = overrides.MaxNodes != 0 ? overrides.MaxNodes : baseOptions.MaxNodes,
                 UseGitIgnore = overrides.UseGitIgnore,
-                Hidden = overrides.Hidden,
+                SkipHidden = overrides.SkipHidden,
                 Format = overrides.Format,
                 Filter = overrides.Filter
             };
@@ -147,7 +147,7 @@ namespace FileTree.Tests.Scanning
 
             var options = Options(new FileTreeOptions
             {
-                Hidden = true
+                SkipHidden = true
             });
 
             var rootNode = _scanner.Scan(_tempRoot, options);
