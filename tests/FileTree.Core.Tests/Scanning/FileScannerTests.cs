@@ -52,7 +52,7 @@ namespace FileTree.Tests.Scanning
                 UseGitIgnore = overrides.UseGitIgnore,
                 SkipHidden = overrides.SkipHidden,
                 Format = overrides.Format,
-                Filter = overrides.Filter
+                Filter = overrides.Filter ?? baseOptions.Filter
             };
         }
 

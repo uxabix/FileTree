@@ -24,4 +24,8 @@
         <ProjectReference Include="..\..\src\FileTree.Core\FileTree.Core.csproj"/>
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Filtering\" />
+    </ItemGroup>
+
 </Project>
