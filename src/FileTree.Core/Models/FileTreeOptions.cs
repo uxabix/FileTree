@@ -2,11 +2,11 @@
 
 public class FileTreeOptions
 {
-    public int MaxDepth { get; init; }
-    public int MaxWidth { get; init; }
-    public int MaxNodes { get; init; }
+    public int MaxDepth { get; init; } = -1;
+    public int MaxWidth { get; init; } = -1;
+    public int MaxNodes { get; init; } = -1;
     public bool UseGitIgnore { get; init; }
-    public bool Hidden { get; init; }
-    public OutputFormat Format { get; init; }
-    public FilterOptions Filter { get; init; }
+    public bool SkipHidden { get; init; }
+    public OutputFormat Format { get; init; } = OutputFormat.Ascii;
+    public FilterOptions Filter { get; init; } = new();
 }

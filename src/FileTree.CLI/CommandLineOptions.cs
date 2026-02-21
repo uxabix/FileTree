@@ -37,4 +37,7 @@ public class CommandLineOptions
 
     [Option("ignore-empty", HelpText = "Skip empty folders.", Required = false)]
     public bool? IgnoreEmptyFolders { get; set; }
+
+    [Option('h', "hidden", HelpText = "Exclude hidden files and folders.", Required = false)]
+    public bool? SkipHidden { get; set; }
 }
