@@ -57,17 +57,52 @@ namespace FileTree.Core.Tests.Scanning
         }
 
         [Fact]
-        public void ShouldInclude_WithFileFilter_ExcludesFiltered()
+        public void ShouldInclude_WithLegacyFileFilter_ExcludesFiltered()
         {
             _fixture.CreateFile("test.tmp");
             var options = new FileTreeOptions
             {
+                #pragma warning disable CS0618 // Type or member is obsolete
                 Filter = new FilterOptions { ExcludeExtensions = new List<string> { ".tmp" } }
+                #pragma warning restore CS0618
             };
             var evaluator = new ScanInclusionEvaluator(_fixture.RootPath, options, null);
             var fileInfo = new FileInfo(Path.Combine(_fixture.RootPath, "test.tmp"));
 
             Assert.False(evaluator.ShouldInclude(fileInfo, 0, 0));
+        }
+
+        [Fact]
+        public void ShouldInclude_WithFilterRules_ExcludesFiltered()
+        {
+            _fixture.CreateFile("test.log");
+            var filterRules = GitIgnoreParser.FromLines(new[] { "*.log" });
+            var options = new FileTreeOptions();
+            var evaluator = new ScanInclusionEvaluator(_fixture.RootPath, options, null, filterRules);
+            var fileInfo = new FileInfo(Path.Combine(_fixture.RootPath, "test.log"));
+
+            Assert.False(evaluator.ShouldInclude(fileInfo, 0, 0));
+        }
+
+        [Fact]
+        public void ShouldInclude_WithFilterRulesAndGitIgnore_BothApplied()
+        {
+            _fixture.CreateFile("test.log");
+            _fixture.CreateFile("test.tmp");
+
+            var gitIgnoreRules = GitIgnoreParser.FromLines(new[] { "*.log" });
+            var filterRules = GitIgnoreParser.FromLines(new[] { "*.tmp" });
+            var options = new FileTreeOptions { UseGitIgnore = true };
+            var evaluator = new ScanInclusionEvaluator(_fixture.RootPath, options, gitIgnoreRules, filterRules);
+
+            var logFile = new FileInfo(Path.Combine(_fixture.RootPath, "test.log"));
+            var tmpFile = new FileInfo(Path.Combine(_fixture.RootPath, "test.tmp"));
+            var txtFile = new FileInfo(Path.Combine(_fixture.RootPath, "test.txt"));
+            _fixture.CreateFile("test.txt");
+
+            Assert.False(evaluator.ShouldInclude(logFile, 0, 0)); // Excluded by gitignore
+            Assert.False(evaluator.ShouldInclude(tmpFile, 0, 0)); // Excluded by filter rules
+            Assert.True(evaluator.ShouldInclude(txtFile, 0, 0));  // Not excluded
         }
 
         [Fact]

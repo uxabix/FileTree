@@ -23,16 +23,36 @@ public class CommandLineOptions
     [Option('f', "format", HelpText = "Output format (Ascii, Markdown, Unicode).", Required = false)]
     public OutputFormat? Format { get; set; }
 
-    [Option('i', "include-ext", HelpText = "Include only these extensions (comma-separated).", Required = false, Separator = ',')]
+    // ============================================================================
+    // New gitignore-style filtering options (recommended)
+    // ============================================================================
+
+    [Option("filter-rules", HelpText = "Filter rules in gitignore format (comma-separated). Example: '*.log,bin/,!important.txt'", Required = false, Separator = ',')]
+    public IEnumerable<string>? FilterRules { get; set; }
+
+    [Option("filter-file", HelpText = "Path to local filter configuration file with gitignore-style rules.", Required = false)]
+    public string? FilterFile { get; set; }
+
+    [Option("global-filter-file", HelpText = "Path to global filter configuration file with gitignore-style rules.", Required = false)]
+    public string? GlobalFilterFile { get; set; }
+
+    [Option("no-default-filters", HelpText = "Don't load default global filter configuration from ~/.filetreeignore", Required = false)]
+    public bool NoDefaultFilters { get; set; }
+
+    // ============================================================================
+    // Legacy filtering options (deprecated but maintained for backward compatibility)
+    // ============================================================================
+
+    [Option('i', "include-ext", HelpText = "[DEPRECATED] Include only these extensions (comma-separated). Use --filter-rules instead.", Required = false, Separator = ',')]
     public IEnumerable<string>? IncludeExtensions { get; set; }
 
-    [Option('e', "exclude-ext", HelpText = "Exclude these extensions (comma-separated).", Required = false, Separator = ',')]
+    [Option('e', "exclude-ext", HelpText = "[DEPRECATED] Exclude these extensions (comma-separated). Use --filter-rules instead.", Required = false, Separator = ',')]
     public IEnumerable<string>? ExcludeExtensions { get; set; }
 
-    [Option("include-names", HelpText = "Include files with these names (comma-separated).", Required = false, Separator = ',')]
+    [Option("include-names", HelpText = "[DEPRECATED] Include files with these names (comma-separated). Use --filter-rules instead.", Required = false, Separator = ',')]
     public IEnumerable<string>? IncludeNames { get; set; }
 
-    [Option("exclude-names", HelpText = "Exclude files with these names (comma-separated).", Required = false, Separator = ',')]
+    [Option("exclude-names", HelpText = "[DEPRECATED] Exclude files with these names (comma-separated). Use --filter-rules instead.", Required = false, Separator = ',')]
     public IEnumerable<string>? ExcludeNames { get; set; }
 
     [Option("ignore-empty", HelpText = "Skip empty folders.", Required = false)]
