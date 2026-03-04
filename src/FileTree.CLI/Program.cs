@@ -1,4 +1,5 @@
-﻿using CommandLine;
+using System.Runtime.InteropServices;
+using CommandLine;
 using FileTree.Core.Models;
 using FileTree.Core.Services;
 
@@ -6,16 +7,24 @@ namespace FileTree.CLI;
 
 internal class Program
 {
-    private static void Main(string[] args)
+    private static int Main(string[] args)
     {
-        Parser.Default.ParseArguments<CommandLineOptions>(args)
-            .WithParsed(RunOptions);
+        int res = Parser.Default
+            .ParseArguments<ScanCommandOptions, InstallCommandOptions, UninstallCommandOptions>(args)
+            .MapResult(
+                (ScanCommandOptions opts) => RunScan(opts),
+                (InstallCommandOptions _) => RunInstallAsync().GetAwaiter().GetResult(),
+                (UninstallCommandOptions _) => RunUninstallAsync().GetAwaiter().GetResult(),
+                _ => 1);
+        Console.ReadKey();
+
+        return res;
     }
 
-    private static void RunOptions(CommandLineOptions opts)
+    private static int RunScan(ScanCommandOptions opts)
     {
         var targetPath = opts.Path ?? Directory.GetCurrentDirectory();
-        
+
         var options = new FileTreeOptions
         {
             MaxDepth = opts.MaxDepth ?? -1,
@@ -36,10 +45,24 @@ internal class Program
 
         Console.WriteLine($"Scanning directory: {targetPath}");
         Console.WriteLine($"Options: MaxDepth={options.MaxDepth}, Format={options.Format}, UseGitIgnore={options.UseGitIgnore}");
-        
+
         FileTreeService service = new();
         Console.WriteLine(service.Generate(targetPath, options));
-        
-        Console.WriteLine("FileTreeService integration pending...");
+
+        return 0;
+    }
+
+    private static async Task<int> RunInstallAsync()
+    {
+        var integrator = SystemIntegratorFactory.Create();
+        await integrator.InstallAsync();
+        return 0;
+    }
+
+    private static async Task<int> RunUninstallAsync()
+    {
+        var integrator = SystemIntegratorFactory.Create();
+        await integrator.UninstallAsync();
+        return 0;
     }
 }

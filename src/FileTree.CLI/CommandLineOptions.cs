@@ -1,9 +1,10 @@
-﻿using CommandLine;
+using CommandLine;
 using FileTree.Core.Models;
 
 namespace FileTree.CLI;
 
-public class CommandLineOptions
+[Verb("scan", isDefault: true, HelpText = "Scan and print the directory tree.")]
+public class ScanCommandOptions
 {
     [Value(0, MetaName = "path", HelpText = "Path to the directory to scan.", Required = false)]
     public string? Path { get; set; }
@@ -40,4 +41,14 @@ public class CommandLineOptions
 
     [Option('h', "hidden", HelpText = "Exclude hidden files and folders.", Required = false)]
     public bool? SkipHidden { get; set; }
+}
+
+[Verb("install", HelpText = "Install FileTree into the system (PATH, context menu, etc.).")]
+public class InstallCommandOptions
+{
+}
+
+[Verb("uninstall", HelpText = "Uninstall FileTree from the system for the current user.")]
+public class UninstallCommandOptions
+{
 }
