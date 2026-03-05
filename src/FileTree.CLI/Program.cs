@@ -35,7 +35,7 @@ internal class Program
 
     private static int RunScanOnce(ScanCommandOptions opts)
     {
-        var targetPath = opts.Path ?? Directory.GetCurrentDirectory();
+        var targetPath = opts.PathOption ?? opts.Path ?? Directory.GetCurrentDirectory();
 
         var options = new FileTreeOptions
         {
@@ -51,7 +51,7 @@ internal class Program
                 ExcludeExtensions = opts.ExcludeExtensions?.ToList() ?? new List<string>(),
                 IncludeNames = opts.IncludeNames?.ToList() ?? new List<string>(),
                 ExcludeNames = opts.ExcludeNames?.ToList() ?? new List<string>(),
-                IgnoreEmptyFolders = opts.IgnoreEmptyFolders ?? false
+                IgnoreEmptyFolders = opts.IgnoreEmptyFolders,
             }
         };
 
@@ -100,6 +100,14 @@ internal class Program
                 return 0;
             }
 
+            if (string.Equals(trimmed, "help", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(trimmed, "?", StringComparison.OrdinalIgnoreCase))
+            {
+                var helpParser = new Parser(cfg => cfg.HelpWriter = Console.Out);
+                helpParser.ParseArguments<ScanCommandOptions>(new[] { "--help" });
+                continue;
+            }
+
             var args = TokenizeArguments(trimmed);
             if (args.Length == 0)
             {
@@ -124,9 +132,10 @@ internal class Program
 
     private static void MergeScanOptions(ScanCommandOptions target, ScanCommandOptions source)
     {
-        if (!string.IsNullOrWhiteSpace(source.Path))
+        if (!string.IsNullOrWhiteSpace(source.PathOption))
         {
-            target.Path = source.Path;
+            target.Path = source.PathOption;
+            target.PathOption = source.PathOption;
         }
 
         if (source.MaxDepth.HasValue)
@@ -174,7 +183,7 @@ internal class Program
             target.ExcludeNames = source.ExcludeNames;
         }
 
-        if (source.IgnoreEmptyFolders.HasValue)
+        if (source.IgnoreEmptyFolders)
         {
             target.IgnoreEmptyFolders = source.IgnoreEmptyFolders;
         }
@@ -184,7 +193,7 @@ internal class Program
             target.SkipHidden = source.SkipHidden;
         }
 
-        if (source.Wait.HasValue)
+        if (source.Wait)
         {
             target.Wait = source.Wait;
         }

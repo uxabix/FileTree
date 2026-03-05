@@ -9,6 +9,9 @@ public class ScanCommandOptions
     [Value(0, MetaName = "path", HelpText = "Path to the directory to scan.", Required = false)]
     public string? Path { get; set; }
 
+    [Option('p', "path", HelpText = "Path to the directory to scan.", Required = false)]
+    public string? PathOption { get; set; }
+
     [Option('d', "max-depth", HelpText = "Maximum depth of the tree.", Required = false)]
     public int? MaxDepth { get; set; }
 
@@ -37,13 +40,13 @@ public class ScanCommandOptions
     public IEnumerable<string>? ExcludeNames { get; set; }
 
     [Option("ignore-empty", HelpText = "Skip empty folders.", Required = false)]
-    public bool? IgnoreEmptyFolders { get; set; }
+    public bool IgnoreEmptyFolders { get; set; }
 
     [Option('h', "hidden", HelpText = "Exclude hidden files and folders.", Required = false)]
     public bool? SkipHidden { get; set; }
 
     [Option("wait", HelpText = "Do not run immediately; enter interactive mode, accept more options, and run on 'show'.", Required = false)]
-    public bool? Wait { get; set; }
+    public bool Wait { get; set; }
 }
 
 [Verb("install", HelpText = "Install FileTree into the system (PATH, context menu, etc.).")]
