@@ -41,6 +41,9 @@ public class ScanCommandOptions
 
     [Option('h', "hidden", HelpText = "Exclude hidden files and folders.", Required = false)]
     public bool? SkipHidden { get; set; }
+
+    [Option("wait", HelpText = "Do not run immediately; enter interactive mode, accept more options, and run on 'show'.", Required = false)]
+    public bool? Wait { get; set; }
 }
 
 [Verb("install", HelpText = "Install FileTree into the system (PATH, context menu, etc.).")]

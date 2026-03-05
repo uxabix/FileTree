@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace FileTree.CLI;
+namespace FileTree.CLI.SystemIntegrator;
 
 internal sealed class LinuxSystemIntegrator : ISystemIntegrator
 {

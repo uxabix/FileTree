@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace FileTree.CLI;
+namespace FileTree.CLI.SystemIntegrator;
 
 internal static class SystemIntegratorFactory
 {

@@ -1,4 +1,4 @@
-namespace FileTree.CLI;
+namespace FileTree.CLI.SystemIntegrator;
 
 internal sealed class NoOpSystemIntegrator : ISystemIntegrator
 {

@@ -1,9 +1,11 @@
+using System.Runtime.Versioning;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
-namespace FileTree.CLI;
+namespace FileTree.CLI.SystemIntegrator;
 
+[SupportedOSPlatform("windows")]
 internal sealed class WindowsSystemIntegrator : ISystemIntegrator
 {
     private const string DirectoryMenuKey =
@@ -17,6 +19,18 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
 
     private const string DirectoryBackgroundMenuKey =
         @"Software\Classes\Directory\Background\shell\FileTree";
+
+    private const string DirectoryMenuKeyCustom =
+        @"Software\Classes\Directory\shell\FileTreeCustom";
+
+    private const string FileMenuKeyCustom =
+        @"Software\Classes\*\shell\FileTreeCustom";
+
+    private const string DesktopMenuKeyCustom =
+        @"Software\Classes\DesktopBackground\shell\FileTreeCustom";
+
+    private const string DirectoryBackgroundMenuKeyCustom =
+        @"Software\Classes\Directory\Background\shell\FileTreeCustom";
 
     public Task InstallAsync()
     {
@@ -238,24 +252,31 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
 
     private static void AddContextMenu(string exePath)
     {
+        // Call with default options
         AddContextMenuForKey(DirectoryMenuKey, exePath, "\"%1\"");
         AddContextMenuForKey(FileMenuKey, exePath, "\"%1\"");
         AddContextMenuForKey(DesktopMenuKey, exePath, "");
         AddContextMenuForKey(DirectoryBackgroundMenuKey, exePath, "");
+        
+        // Customizable call
+        AddContextMenuForKey(DirectoryMenuKeyCustom, exePath, "\"%1\" --wait true", "FileTree Customizable");
+        AddContextMenuForKey(FileMenuKeyCustom, exePath, "\"%1\" --wait true", "FileTree Customizable");
+        AddContextMenuForKey(DesktopMenuKeyCustom, exePath, "--wait true", "FileTree Customizable");
+        AddContextMenuForKey(DirectoryBackgroundMenuKeyCustom, exePath, "--wait true", "FileTree Customizable");
     }
-
-    private static void AddContextMenuForKey(string keyPath, string exePath, string argument)
+    
+    private static void AddContextMenuForKey(
+        string keyPath,
+        string exePath,
+        string argument,
+        string menuText="FileTree")
     {
         using var mainKey = Registry.CurrentUser.CreateSubKey(keyPath);
-        if (mainKey is null)
-            throw new InvalidOperationException($"Failed to create registry key: {keyPath}");
 
-        mainKey.SetValue(string.Empty, "FileTree");
+        mainKey.SetValue(string.Empty, menuText);
         mainKey.SetValue("Icon", exePath);
 
         using var commandKey = mainKey.CreateSubKey("command");
-        if (commandKey is null)
-            throw new InvalidOperationException($"Failed to create command key for: {keyPath}");
 
         var command = string.IsNullOrWhiteSpace(argument)
             ? $"\"{exePath}\""
