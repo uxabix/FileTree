@@ -1,53 +1,41 @@
-﻿using CommandLine;
+using System.Text;
+using CommandLine;
 using FileTree.Core.Models;
 using FileTree.Core.Services;
+using FileTree.CLI.SystemIntegrator;
 
 namespace FileTree.CLI;
 
 internal class Program
 {
-    private static void Main(string[] args)
+    private static int Main(string[] args)
     {
-        Parser.Default.ParseArguments<CommandLineOptions>(args)
-            .WithParsed(RunOptions);
+        int res = Parser.Default
+            .ParseArguments<ScanCommandOptions, InstallCommandOptions, UninstallCommandOptions>(args)
+            .MapResult(
+                (ScanCommandOptions opts) => RunScan(opts),
+                (InstallCommandOptions _) => RunInstallAsync().GetAwaiter().GetResult(),
+                (UninstallCommandOptions _) => RunUninstallAsync().GetAwaiter().GetResult(),
+                _ => 1);
+        Console.WriteLine("Press any key to exit...");
+        Console.ReadKey();
+
+        return res;
     }
 
-    private static void RunOptions(CommandLineOptions opts)
+    private static int RunScan(ScanCommandOptions opts)
     {
-        var targetPath = opts.Path ?? Directory.GetCurrentDirectory();
-
-        // Build filter rules source from new-style options
-        FilterRulesSource? rulesSource = null;
-
-        // Check if any new-style filtering options are provided
-        if (opts.FilterRules?.Any() == true ||
-            !string.IsNullOrWhiteSpace(opts.FilterFile) ||
-            !string.IsNullOrWhiteSpace(opts.GlobalFilterFile) ||
-            opts.NoDefaultFilters)
+        if (opts.Wait == true)
         {
-            rulesSource = new FilterRulesSource
-            {
-                InlineRules = opts.FilterRules?.ToList() ?? new List<string>(),
-                LocalConfigPath = opts.FilterFile,
-                GlobalConfigPath = opts.GlobalFilterFile,
-                UseDefaultGlobalConfig = !opts.NoDefaultFilters
-            };
+            return RunScanInteractive(opts);
         }
 
-        // Build filter options (supports both new and legacy filtering)
-        var filterOptions = new FilterOptions
-        {
-            RulesSource = rulesSource,
-            IgnoreEmptyFolders = opts.IgnoreEmptyFolders ?? false,
+        return RunScanOnce(opts);
+    }
 
-            // Legacy options (for backward compatibility)
-            #pragma warning disable CS0618 // Type or member is obsolete
-            IncludeExtensions = opts.IncludeExtensions?.ToList() ?? new List<string>(),
-            ExcludeExtensions = opts.ExcludeExtensions?.ToList() ?? new List<string>(),
-            IncludeNames = opts.IncludeNames?.ToList() ?? new List<string>(),
-            ExcludeNames = opts.ExcludeNames?.ToList() ?? new List<string>()
-            #pragma warning restore CS0618 // Type or member is obsolete
-        };
+    private static int RunScanOnce(ScanCommandOptions opts)
+    {
+        var targetPath = opts.PathOption ?? opts.Path ?? Directory.GetCurrentDirectory();
 
         var options = new FileTreeOptions
         {
@@ -57,7 +45,14 @@ internal class Program
             UseGitIgnore = opts.UseGitIgnore ?? true,
             SkipHidden = opts.SkipHidden ?? true,
             Format = opts.Format ?? OutputFormat.Ascii,
-            Filter = filterOptions
+            Filter = new FilterOptions
+            {
+                IncludeExtensions = opts.IncludeExtensions?.ToList() ?? new List<string>(),
+                ExcludeExtensions = opts.ExcludeExtensions?.ToList() ?? new List<string>(),
+                IncludeNames = opts.IncludeNames?.ToList() ?? new List<string>(),
+                ExcludeNames = opts.ExcludeNames?.ToList() ?? new List<string>(),
+                IgnoreEmptyFolders = opts.IgnoreEmptyFolders,
+            }
         };
 
         Console.WriteLine($"Scanning directory: {targetPath}");
@@ -66,6 +61,193 @@ internal class Program
         FileTreeService service = new();
         Console.WriteLine(service.Generate(targetPath, options));
 
-        Console.WriteLine("FileTreeService integration pending...");
+        return 0;
+    }
+
+    private static int RunScanInteractive(ScanCommandOptions opts)
+    {
+        var current = opts;
+
+        Console.WriteLine("Interactive mode. Type additional options (e.g. -w 10 -n 200), then 'show' to print the tree or 'exit' to quit.");
+        Console.WriteLine();
+
+        while (true)
+        {
+            Console.Write("> ");
+            var line = Console.ReadLine();
+
+            if (line is null)
+            {
+                return 0;
+            }
+
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            var trimmed = line.Trim();
+            if (string.Equals(trimmed, "show", StringComparison.OrdinalIgnoreCase))
+            {
+                // In interactive mode we ignore the wait flag when running.
+                current.Wait = false;
+                return RunScanOnce(current);
+            }
+
+            if (string.Equals(trimmed, "exit", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(trimmed, "quit", StringComparison.OrdinalIgnoreCase))
+            {
+                return 0;
+            }
+
+            if (string.Equals(trimmed, "help", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(trimmed, "?", StringComparison.OrdinalIgnoreCase))
+            {
+                var helpParser = new Parser(cfg => cfg.HelpWriter = Console.Out);
+                helpParser.ParseArguments<ScanCommandOptions>(new[] { "--help" });
+                continue;
+            }
+
+            var args = TokenizeArguments(trimmed);
+            if (args.Length == 0)
+            {
+                continue;
+            }
+
+            var parser = new Parser(cfg => cfg.HelpWriter = null);
+            var result = parser.ParseArguments<ScanCommandOptions>(args);
+
+            result
+                .WithParsed(newOpts =>
+                {
+                    MergeScanOptions(current, newOpts);
+                    Console.WriteLine("Updated options.");
+                })
+                .WithNotParsed(_ =>
+                {
+                    Console.WriteLine("Could not parse input. Please enter valid options or 'show'/'exit'.");
+                });
+        }
+    }
+
+    private static void MergeScanOptions(ScanCommandOptions target, ScanCommandOptions source)
+    {
+        if (!string.IsNullOrWhiteSpace(source.PathOption))
+        {
+            target.Path = source.PathOption;
+            target.PathOption = source.PathOption;
+        }
+
+        if (source.MaxDepth.HasValue)
+        {
+            target.MaxDepth = source.MaxDepth;
+        }
+
+        if (source.MaxWidth.HasValue)
+        {
+            target.MaxWidth = source.MaxWidth;
+        }
+
+        if (source.MaxNodes.HasValue)
+        {
+            target.MaxNodes = source.MaxNodes;
+        }
+
+        if (source.UseGitIgnore.HasValue)
+        {
+            target.UseGitIgnore = source.UseGitIgnore;
+        }
+
+        if (source.Format.HasValue)
+        {
+            target.Format = source.Format;
+        }
+
+        if (source.IncludeExtensions is not null)
+        {
+            target.IncludeExtensions = source.IncludeExtensions;
+        }
+
+        if (source.ExcludeExtensions is not null)
+        {
+            target.ExcludeExtensions = source.ExcludeExtensions;
+        }
+
+        if (source.IncludeNames is not null)
+        {
+            target.IncludeNames = source.IncludeNames;
+        }
+
+        if (source.ExcludeNames is not null)
+        {
+            target.ExcludeNames = source.ExcludeNames;
+        }
+
+        if (source.IgnoreEmptyFolders)
+        {
+            target.IgnoreEmptyFolders = source.IgnoreEmptyFolders;
+        }
+
+        if (source.SkipHidden.HasValue)
+        {
+            target.SkipHidden = source.SkipHidden;
+        }
+
+        if (source.Wait)
+        {
+            target.Wait = source.Wait;
+        }
+    }
+
+    private static string[] TokenizeArguments(string input)
+    {
+        var args = new List<string>();
+        var current = new StringBuilder();
+        var inQuotes = false;
+
+        for (var i = 0; i < input.Length; i++)
+        {
+            var c = input[i];
+
+            if (c == '"')
+            {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (char.IsWhiteSpace(c) && !inQuotes)
+            {
+                if (current.Length > 0)
+                {
+                    args.Add(current.ToString());
+                    current.Clear();
+                }
+
+                continue;
+            }
+
+            current.Append(c);
+        }
+
+        if (current.Length > 0)
+        {
+            args.Add(current.ToString());
+        }
+
+        return args.ToArray();
+    }
+
+    private static async Task<int> RunInstallAsync()
+    {
+        var integrator = SystemIntegratorFactory.Create();
+        await integrator.InstallAsync();
+        return 0;
+    }
+
+    private static async Task<int> RunUninstallAsync()
+    {
+        var integrator = SystemIntegratorFactory.Create();
+        await integrator.UninstallAsync();
+        return 0;
     }
 }
