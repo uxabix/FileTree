@@ -23,6 +23,7 @@ namespace FileTree.Core.Scanning
             string fullRootPath = Path.GetFullPath(rootPath);
             _nodeCount = 0;
 
+            // Load .gitignore rules if configured
             GitIgnoreRules? gitIgnore = null;
             if (options.UseGitIgnore)
             {
@@ -33,7 +34,23 @@ namespace FileTree.Core.Scanning
                 }
             }
 
-            _inclusionEvaluator = new ScanInclusionEvaluator(fullRootPath, options, gitIgnore);
+            // Load custom filter rules
+            GitIgnoreRules? filterRules = null;
+
+            // Check if new-style filtering is configured
+            if (options.Filter.RulesSource != null)
+            {
+                var loader = new FilterRulesLoader();
+                filterRules = loader.LoadFilterRules(options.Filter.RulesSource);
+            }
+            // Fall back to converting legacy filters if present
+            else if (LegacyFilterConverter.HasLegacyFilters(options.Filter))
+            {
+                var legacyRules = LegacyFilterConverter.ConvertToGitIgnoreRules(options.Filter);
+                filterRules = GitIgnoreParser.FromLines(legacyRules);
+            }
+
+            _inclusionEvaluator = new ScanInclusionEvaluator(fullRootPath, options, gitIgnore, filterRules);
             _ignoreEmptyFolders = options.Filter.IgnoreEmptyFolders;
 
             var rootInfo = new DirectoryInfo(fullRootPath);

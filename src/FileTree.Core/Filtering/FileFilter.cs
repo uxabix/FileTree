@@ -1,7 +1,17 @@
+using System;
 using FileTree.Core.Models;
 
 namespace FileTree.Core.Filtering;
 
+/// <summary>
+/// Legacy file filter implementation using simple list-based filtering.
+/// </summary>
+/// <remarks>
+/// This class is obsolete and maintained only for backward compatibility.
+/// Use FilterRulesSource with gitignore-style rules instead.
+/// This class will be removed in v2.0.0.
+/// </remarks>
+[Obsolete("Use FilterRulesSource with gitignore-style rules instead. This class will be removed in v2.0.0")]
 internal class FileFilter : IFileFilter
 {
     private readonly FilterOptions _options;
