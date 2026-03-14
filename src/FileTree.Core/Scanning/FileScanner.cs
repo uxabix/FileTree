@@ -15,24 +15,27 @@ namespace FileTree.Core.Scanning
         private bool _ignoreEmptyFolders;
         private ScanInclusionEvaluator? _inclusionEvaluator;
 
-        public FileNode Scan(string rootPath, FileTreeOptions options)
+    /// <summary>
+    /// Scans the directory tree starting from the specified root path.
+    /// </summary>
+    /// <param name="rootPath">Validated full path to the root directory (caller must validate existence).</param>
+    /// <param name="options">Scanning options.</param>
+    /// <returns>FileNode representing the scanned tree.</returns>
+    public FileNode Scan(string rootPath, FileTreeOptions options)
+    {
+        string fullRootPath = Path.GetFullPath(rootPath);
+        _nodeCount = 0;
+
+        // Load .gitignore rules if configured
+        GitIgnoreRules? gitIgnore = null;
+        if (options.UseGitIgnore)
         {
-            if (!Directory.Exists(rootPath))
-                throw new DirectoryNotFoundException(rootPath);
-
-            string fullRootPath = Path.GetFullPath(rootPath);
-            _nodeCount = 0;
-
-            // Load .gitignore rules if configured
-            GitIgnoreRules? gitIgnore = null;
-            if (options.UseGitIgnore)
+            string gitIgnorePath = Path.Combine(fullRootPath, ".gitignore");
+            if (File.Exists(gitIgnorePath))
             {
-                string gitIgnorePath = Path.Combine(fullRootPath, ".gitignore");
-                if (File.Exists(gitIgnorePath))
-                {
-                    gitIgnore = GitIgnoreParser.FromFile(gitIgnorePath);
-                }
+                gitIgnore = GitIgnoreParser.FromFile(gitIgnorePath);
             }
+        }
 
             // Load custom filter rules
             GitIgnoreRules? filterRules = null;

@@ -2,6 +2,7 @@ using System.Text;
 using CommandLine;
 using FileTree.Core.Models;
 using FileTree.Core.Services;
+using FileTree.Core.Utilities;
 using FileTree.CLI.SystemIntegrator;
 
 namespace FileTree.CLI;
@@ -58,10 +59,24 @@ internal class Program
         Console.WriteLine($"Scanning directory: {targetPath}");
         Console.WriteLine($"Options: MaxDepth={options.MaxDepth}, Format={options.Format}, UseGitIgnore={options.UseGitIgnore}");
 
-        FileTreeService service = new();
-        Console.WriteLine(service.Generate(targetPath, options));
-
-        return 0;
+        var service = new FileTreeService();
+        try
+        {
+            Console.WriteLine(service.Generate(targetPath, options));
+            return 0;
+        }
+        catch (PathValidationException ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            Console.ResetColor();
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Error.WriteLine($"Path: {ex.Path}");
+            Console.Error.WriteLine("Type: " + ex.ErrorType);
+            Console.ResetColor();
+            Console.Error.WriteLine();
+            return 1;
+        }
     }
 
     private static int RunScanInteractive(ScanCommandOptions opts)
@@ -87,12 +102,20 @@ internal class Program
             }
 
             var trimmed = line.Trim();
-            if (string.Equals(trimmed, "show", StringComparison.OrdinalIgnoreCase))
-            {
-                // In interactive mode we ignore the wait flag when running.
-                current.Wait = false;
-                return RunScanOnce(current);
-            }
+                if (string.Equals(trimmed, "show", StringComparison.OrdinalIgnoreCase))
+                {
+                    // In interactive mode we ignore the wait flag when running.
+                    current.Wait = false;
+                    try
+                    {
+                        return RunScanOnce(current);
+                    }
+                    catch (PathValidationException)
+                    {
+                        // Error already handled in RunScanOnce
+                        return 1;
+                    }
+                }
 
             if (string.Equals(trimmed, "exit", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(trimmed, "quit", StringComparison.OrdinalIgnoreCase))
