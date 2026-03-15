@@ -81,8 +81,7 @@ namespace FileTree.Core.Scanning
                 return;
             }
 
-            if (options.MaxWidth != -1)
-                items = items.Take(options.MaxWidth).ToArray();
+            int visibleCount = 0;
 
             foreach (var item in items)
             {
@@ -94,6 +93,9 @@ namespace FileTree.Core.Scanning
 
                 if (!_inclusionEvaluator.ShouldInclude(item, currentDepth, _nodeCount))
                     continue;
+
+                if (options.MaxWidth != -1 && visibleCount >= options.MaxWidth)
+                    break;
 
                 bool isDir = item is DirectoryInfo;
 
@@ -111,8 +113,13 @@ namespace FileTree.Core.Scanning
                     {
                         parentNode.RemoveChild(node);
                         _nodeCount--;
+                        continue;
                     }
                 }
+
+                visibleCount++;
+                if (options.MaxWidth != -1 && visibleCount >= options.MaxWidth)
+                    break;
             }
         }
     }
