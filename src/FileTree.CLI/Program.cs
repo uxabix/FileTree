@@ -36,6 +36,11 @@ internal class Program
 
     private static int RunScanOnce(ScanCommandOptions opts)
     {
+        // Basic validation to catch common parsing mistakes
+        if (opts.Path == "true" || opts.Path == "false")
+        {
+            opts.Path = null; // Treat as if no path was provided
+        }
         var targetPath = opts.PathOption ?? opts.Path ?? Directory.GetCurrentDirectory();
 
         var options = new FileTreeOptions

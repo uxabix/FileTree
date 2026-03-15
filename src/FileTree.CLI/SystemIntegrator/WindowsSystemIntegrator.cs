@@ -259,10 +259,10 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
         AddContextMenuForKey(DirectoryBackgroundMenuKey, exePath, "");
         
         // Customizable call
-        AddContextMenuForKey(DirectoryMenuKeyCustom, exePath, "\"%1\" --wait true", "FileTree Customizable");
-        AddContextMenuForKey(FileMenuKeyCustom, exePath, "\"%1\" --wait true", "FileTree Customizable");
-        AddContextMenuForKey(DesktopMenuKeyCustom, exePath, "--wait true", "FileTree Customizable");
-        AddContextMenuForKey(DirectoryBackgroundMenuKeyCustom, exePath, "--wait true", "FileTree Customizable");
+        AddContextMenuForKey(DirectoryMenuKeyCustom, exePath, "\"%1\" --wait", "FileTree Customizable");
+        AddContextMenuForKey(FileMenuKeyCustom, exePath, "\"%1\" --wait", "FileTree Customizable");
+        AddContextMenuForKey(DesktopMenuKeyCustom, exePath, "--wait", "FileTree Customizable");
+        AddContextMenuForKey(DirectoryBackgroundMenuKeyCustom, exePath, "--wait", "FileTree Customizable");
     }
     
     private static void AddContextMenuForKey(
