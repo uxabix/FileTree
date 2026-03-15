@@ -78,3 +78,8 @@ public class InstallCommandOptions
 public class UninstallCommandOptions
 {
 }
+
+[Verb("uninstall-deep", HelpText = "Deep uninstall FileTree (search and remove all FileTree entries for the current user).")]
+public class UninstallDeepCommandOptions
+{
+}

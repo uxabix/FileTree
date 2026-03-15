@@ -12,11 +12,12 @@ internal class Program
     private static int Main(string[] args)
     {
         int res = Parser.Default
-            .ParseArguments<ScanCommandOptions, InstallCommandOptions, UninstallCommandOptions>(args)
+            .ParseArguments<ScanCommandOptions, InstallCommandOptions, UninstallCommandOptions, UninstallDeepCommandOptions>(args)
             .MapResult(
                 (ScanCommandOptions opts) => RunScan(opts),
                 (InstallCommandOptions _) => RunInstallAsync().GetAwaiter().GetResult(),
                 (UninstallCommandOptions _) => RunUninstallAsync().GetAwaiter().GetResult(),
+                (UninstallDeepCommandOptions _) => RunUninstallDeepAsync().GetAwaiter().GetResult(),
                 _ => 1);
         Console.WriteLine("Press any key to exit...");
         Console.ReadKey();
@@ -276,6 +277,13 @@ internal class Program
     {
         var integrator = SystemIntegratorFactory.Create();
         await integrator.UninstallAsync();
+        return 0;
+    }
+
+    private static async Task<int> RunUninstallDeepAsync()
+    {
+        var integrator = SystemIntegratorFactory.Create();
+        await integrator.UninstallDeepAsync();
         return 0;
     }
 }

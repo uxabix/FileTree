@@ -13,5 +13,10 @@ internal sealed class NoOpSystemIntegrator : ISystemIntegrator
         Console.WriteLine("Uninstall command is not supported on this operating system.");
         return Task.CompletedTask;
     }
-}
 
+    public Task UninstallDeepAsync()
+    {
+        Console.WriteLine("Uninstall-deep command is not supported on this operating system.");
+        return Task.CompletedTask;
+    }
+}
