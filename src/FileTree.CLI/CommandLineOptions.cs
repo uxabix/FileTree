@@ -49,6 +49,9 @@ public class ScanCommandOptions
     [Option("no-local-filters", HelpText = "Don't load local .filetreeignore files from the directory tree.", Required = false)]
     public bool NoLocalFilters { get; set; }
 
+    [Option("no-default-settings", HelpText = "Don't load default settings from FileTree.Settings.", Required = false)]
+    public bool NoDefaultSettings { get; set; }
+
     // ============================================================================
     // Legacy filtering options (deprecated but maintained for backward compatibility)
     // ============================================================================

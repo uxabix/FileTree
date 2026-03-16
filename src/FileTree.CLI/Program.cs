@@ -11,14 +11,15 @@ internal class Program
 {
     private static int Main(string[] args)
     {
-        if (TryHandleConfigRules(args, out var configExitCode))
+        EnsureGlobalIgnoreFileOnStartup(args);
+        EnsureSettingsFileOnStartup(args);
+
+        if (TryHandleConfigCommand(args, out var configExitCode))
         {
             Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
             return configExitCode;
         }
-
-        EnsureGlobalIgnoreFileOnStartup(args);
 
         int res = Parser.Default
             .ParseArguments<ScanCommandOptions, InstallCommandOptions, UninstallCommandOptions, UninstallDeepCommandOptions, PathsCommandOptions>(args)
@@ -37,6 +38,8 @@ internal class Program
 
     private static int RunScan(ScanCommandOptions opts)
     {
+        ApplySettingsDefaultsIfNeeded(opts);
+
         if (opts.Wait == true)
         {
             return RunScanInteractive(opts);
@@ -254,6 +257,11 @@ internal class Program
             target.NoLocalFilters = source.NoLocalFilters;
         }
 
+        if (source.NoDefaultSettings)
+        {
+            target.NoDefaultSettings = source.NoDefaultSettings;
+        }
+
         if (source.IgnoreEmptyFolders)
         {
             target.IgnoreEmptyFolders = source.IgnoreEmptyFolders;
@@ -344,6 +352,24 @@ internal class Program
         }
     }
 
+    private static void EnsureSettingsFileOnStartup(string[] args)
+    {
+        if (args.Length > 0)
+        {
+            var command = args[0];
+            if (string.Equals(command, "uninstall", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(command, "uninstall-deep", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+        }
+
+        if (!AppPaths.TryEnsureGlobalSettingsFileExists(out var path, out var error))
+        {
+            Console.Error.WriteLine($"Warning: Could not create settings file at '{path}': {error}");
+        }
+    }
+
     private static int RunPaths()
     {
         var exePath = AppPaths.GetExecutablePath();
@@ -356,7 +382,7 @@ internal class Program
         return 0;
     }
 
-    private static bool TryHandleConfigRules(string[] args, out int exitCode)
+    private static bool TryHandleConfigCommand(string[] args, out int exitCode)
     {
         exitCode = 0;
 
@@ -370,14 +396,36 @@ internal class Program
             return false;
         }
 
-        if (args.Length < 2 || !string.Equals(args[1], "rules", StringComparison.OrdinalIgnoreCase))
+        if (args.Length < 2)
         {
-            PrintConfigRulesHelp();
+            PrintConfigHelp();
             exitCode = 1;
             return true;
         }
 
-        if (args.Length == 2)
+        var section = args[1];
+        var remaining = args.Skip(2).ToArray();
+
+        if (string.Equals(section, "rules", StringComparison.OrdinalIgnoreCase))
+        {
+            return HandleConfigRules(remaining, out exitCode);
+        }
+
+        if (string.Equals(section, "settings", StringComparison.OrdinalIgnoreCase))
+        {
+            return HandleConfigSettings(remaining, out exitCode);
+        }
+
+        PrintConfigHelp();
+        exitCode = 1;
+        return true;
+    }
+
+    private static bool HandleConfigRules(string[] args, out int exitCode)
+    {
+        exitCode = 0;
+
+        if (args.Length == 0)
         {
             if (!AppPaths.TryOpenGlobalIgnoreFile(out var path, out var error))
             {
@@ -388,34 +436,80 @@ internal class Program
             return true;
         }
 
-        if (args.Length >= 3)
+        var action = args[0];
+        if (string.Equals(action, "path", StringComparison.OrdinalIgnoreCase))
         {
-            var action = args[2];
-            if (string.Equals(action, "path", StringComparison.OrdinalIgnoreCase))
+            Console.WriteLine(AppPaths.GetGlobalIgnorePath());
+            return true;
+        }
+
+        if (string.Equals(action, "reset", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!AppPaths.TryResetGlobalIgnoreFile(out var path, out var error))
             {
-                Console.WriteLine(AppPaths.GetGlobalIgnorePath());
-                return true;
+                Console.Error.WriteLine($"Error: Could not reset global ignore file at '{path}': {error}");
+                exitCode = 1;
+            }
+            else
+            {
+                Console.WriteLine($"Reset global ignore file: {path}");
             }
 
-            if (string.Equals(action, "reset", StringComparison.OrdinalIgnoreCase))
-            {
-                if (!AppPaths.TryResetGlobalIgnoreFile(out var path, out var error))
-                {
-                    Console.Error.WriteLine($"Error: Could not reset global ignore file at '{path}': {error}");
-                    exitCode = 1;
-                }
-                else
-                {
-                    Console.WriteLine($"Reset global ignore file: {path}");
-                }
-
-                return true;
-            }
+            return true;
         }
 
         PrintConfigRulesHelp();
         exitCode = 1;
         return true;
+    }
+
+    private static bool HandleConfigSettings(string[] args, out int exitCode)
+    {
+        exitCode = 0;
+
+        if (args.Length == 0)
+        {
+            if (!AppPaths.TryOpenGlobalSettingsFile(out var path, out var error))
+            {
+                Console.Error.WriteLine($"Error: Could not open settings file at '{path}': {error}");
+                exitCode = 1;
+            }
+
+            return true;
+        }
+
+        var action = args[0];
+        if (string.Equals(action, "path", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine(AppPaths.GetGlobalSettingsPath());
+            return true;
+        }
+
+        if (string.Equals(action, "reset", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!AppPaths.TryResetGlobalSettingsFile(out var path, out var error))
+            {
+                Console.Error.WriteLine($"Error: Could not reset settings file at '{path}': {error}");
+                exitCode = 1;
+            }
+            else
+            {
+                Console.WriteLine($"Reset settings file: {path}");
+            }
+
+            return true;
+        }
+
+        PrintConfigSettingsHelp();
+        exitCode = 1;
+        return true;
+    }
+
+    private static void PrintConfigHelp()
+    {
+        Console.WriteLine("Usage:");
+        Console.WriteLine("  FileTree config rules ...");
+        Console.WriteLine("  FileTree config settings ...");
     }
 
     private static void PrintConfigRulesHelp()
@@ -424,6 +518,190 @@ internal class Program
         Console.WriteLine("  FileTree config rules        Open global ignore file in default editor");
         Console.WriteLine("  FileTree config rules path   Show global ignore file path");
         Console.WriteLine("  FileTree config rules reset  Reset global ignore file to defaults");
+    }
+
+    private static void PrintConfigSettingsHelp()
+    {
+        Console.WriteLine("Usage:");
+        Console.WriteLine("  FileTree config settings        Open settings file in default editor");
+        Console.WriteLine("  FileTree config settings path   Show settings file path");
+        Console.WriteLine("  FileTree config settings reset  Reset settings file to defaults");
+    }
+
+    private static void ApplySettingsDefaultsIfNeeded(ScanCommandOptions opts)
+    {
+        if (opts.NoDefaultSettings)
+        {
+            return;
+        }
+
+        var defaults = LoadSettingsDefaults();
+        if (defaults == null)
+        {
+            return;
+        }
+
+        ApplySettingsDefaults(opts, defaults);
+    }
+
+    private static ScanCommandOptions? LoadSettingsDefaults()
+    {
+        var path = AppPaths.GetGlobalSettingsPath();
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            var args = new List<string>();
+            foreach (var line in File.ReadAllLines(path))
+            {
+                var trimmed = line?.Trim();
+                if (string.IsNullOrEmpty(trimmed))
+                {
+                    continue;
+                }
+
+                if (trimmed.StartsWith("#", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                args.AddRange(TokenizeArguments(trimmed));
+            }
+
+            if (args.Count == 0)
+            {
+                return null;
+            }
+
+            if (string.Equals(args[0], "scan", StringComparison.OrdinalIgnoreCase))
+            {
+                args.RemoveAt(0);
+            }
+
+            var parser = new Parser(cfg => cfg.HelpWriter = null);
+            ScanCommandOptions? settings = null;
+            var result = parser.ParseArguments<ScanCommandOptions>(args);
+
+            result
+                .WithParsed(parsed => settings = parsed)
+                .WithNotParsed(_ => settings = null);
+
+            return settings;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Warning: Could not read settings file '{path}': {ex.Message}");
+            return null;
+        }
+    }
+
+    private static void ApplySettingsDefaults(ScanCommandOptions target, ScanCommandOptions defaults)
+    {
+        if (string.IsNullOrWhiteSpace(target.PathOption) && string.IsNullOrWhiteSpace(target.Path))
+        {
+            if (!string.IsNullOrWhiteSpace(defaults.PathOption))
+            {
+                target.PathOption = defaults.PathOption;
+                target.Path = defaults.PathOption;
+            }
+            else if (!string.IsNullOrWhiteSpace(defaults.Path))
+            {
+                target.Path = defaults.Path;
+            }
+        }
+
+        if (!target.MaxDepth.HasValue && defaults.MaxDepth.HasValue)
+        {
+            target.MaxDepth = defaults.MaxDepth;
+        }
+
+        if (!target.MaxWidth.HasValue && defaults.MaxWidth.HasValue)
+        {
+            target.MaxWidth = defaults.MaxWidth;
+        }
+
+        if (!target.MaxNodes.HasValue && defaults.MaxNodes.HasValue)
+        {
+            target.MaxNodes = defaults.MaxNodes;
+        }
+
+        if (!target.UseGitIgnore.HasValue && defaults.UseGitIgnore.HasValue)
+        {
+            target.UseGitIgnore = defaults.UseGitIgnore;
+        }
+
+        if (!target.Format.HasValue && defaults.Format.HasValue)
+        {
+            target.Format = defaults.Format;
+        }
+
+        if (target.FilterRules is null && defaults.FilterRules is not null)
+        {
+            target.FilterRules = defaults.FilterRules;
+        }
+
+        if (string.IsNullOrWhiteSpace(target.FilterFile) && !string.IsNullOrWhiteSpace(defaults.FilterFile))
+        {
+            target.FilterFile = defaults.FilterFile;
+        }
+
+        if (string.IsNullOrWhiteSpace(target.GlobalFilterFile) && !string.IsNullOrWhiteSpace(defaults.GlobalFilterFile))
+        {
+            target.GlobalFilterFile = defaults.GlobalFilterFile;
+        }
+
+        if (!target.NoDefaultFilters && defaults.NoDefaultFilters)
+        {
+            target.NoDefaultFilters = true;
+        }
+
+        if (!target.NoAppGlobalIgnore && defaults.NoAppGlobalIgnore)
+        {
+            target.NoAppGlobalIgnore = true;
+        }
+
+        if (!target.NoLocalFilters && defaults.NoLocalFilters)
+        {
+            target.NoLocalFilters = true;
+        }
+
+        if (!target.IgnoreEmptyFolders && defaults.IgnoreEmptyFolders)
+        {
+            target.IgnoreEmptyFolders = true;
+        }
+
+        if (!target.SkipHidden.HasValue && defaults.SkipHidden.HasValue)
+        {
+            target.SkipHidden = defaults.SkipHidden;
+        }
+
+        if (target.IncludeExtensions is null && defaults.IncludeExtensions is not null)
+        {
+            target.IncludeExtensions = defaults.IncludeExtensions;
+        }
+
+        if (target.ExcludeExtensions is null && defaults.ExcludeExtensions is not null)
+        {
+            target.ExcludeExtensions = defaults.ExcludeExtensions;
+        }
+
+        if (target.IncludeNames is null && defaults.IncludeNames is not null)
+        {
+            target.IncludeNames = defaults.IncludeNames;
+        }
+
+        if (target.ExcludeNames is null && defaults.ExcludeNames is not null)
+        {
+            target.ExcludeNames = defaults.ExcludeNames;
+        }
+
+        if (!target.Wait && defaults.Wait)
+        {
+            target.Wait = true;
+        }
     }
 
     private static async Task<int> RunInstallAsync()

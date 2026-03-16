@@ -38,6 +38,7 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
         var exePath = GetExecutablePath();
         var exeDirectory = Path.GetDirectoryName(exePath)!;
         var ignorePath = AppPaths.GetGlobalIgnorePath();
+        var settingsPath = AppPaths.GetGlobalSettingsPath();
 
         var alreadyInPath = IsDirectoryInUserPath(exeDirectory);
         var contextMenuExists = ContextMenuExists();
@@ -57,6 +58,18 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
             else
             {
                 Console.WriteLine($"! Failed to create FileTree.ignore: {error}");
+            }
+        }
+
+        if (!File.Exists(settingsPath))
+        {
+            if (AppPaths.TryEnsureGlobalSettingsFileExists(out _, out var error))
+            {
+                Console.WriteLine("+ Created FileTree.Settings");
+            }
+            else
+            {
+                Console.WriteLine($"! Failed to create FileTree.Settings: {error}");
             }
         }
 
@@ -84,6 +97,7 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
         var exePath = GetExecutablePath();
         var exeDirectory = Path.GetDirectoryName(exePath)!;
         var ignorePath = AppPaths.GetGlobalIgnorePath();
+        var settingsPath = AppPaths.GetGlobalSettingsPath();
 
         var removedShims = RemoveCommandShims(exePath);
         if (removedShims)
@@ -125,6 +139,18 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
             }
         }
 
+        if (File.Exists(settingsPath))
+        {
+            if (AppPaths.TryDeleteGlobalSettingsFile(out _, out var error))
+            {
+                Console.WriteLine("+ Removed FileTree.Settings");
+            }
+            else
+            {
+                Console.WriteLine($"! Failed to remove FileTree.Settings: {error}");
+            }
+        }
+
         return Task.CompletedTask;
     }
 
@@ -133,6 +159,7 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
         var exePath = GetExecutablePath();
         var exeDirectory = Path.GetDirectoryName(exePath)!;
         var ignorePath = AppPaths.GetGlobalIgnorePath();
+        var settingsPath = AppPaths.GetGlobalSettingsPath();
 
         Console.WriteLine("Searching for FileTree entries created by any installation...");
 
@@ -161,6 +188,18 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
             else
             {
                 Console.WriteLine($"! Failed to remove FileTree.ignore: {error}");
+            }
+        }
+
+        if (File.Exists(settingsPath))
+        {
+            if (AppPaths.TryDeleteGlobalSettingsFile(out _, out var error))
+            {
+                Console.WriteLine("+ Removed FileTree.Settings");
+            }
+            else
+            {
+                Console.WriteLine($"! Failed to remove FileTree.Settings: {error}");
             }
         }
 
