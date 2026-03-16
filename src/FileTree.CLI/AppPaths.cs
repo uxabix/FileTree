@@ -5,6 +5,9 @@ namespace FileTree.CLI;
 internal static class AppPaths
 {
     internal const string GlobalIgnoreFileName = "FileTree.ignore";
+    private const string DefaultGlobalIgnoreContents =
+        "# FileTree global ignore rules\n" +
+        "# Add gitignore-style patterns here.\n";
 
     internal static string GetExecutablePath()
     {
@@ -51,11 +54,24 @@ internal static class AppPaths
                 return true;
             }
 
-            var contents =
-                "# FileTree global ignore rules\n" +
-                "# Add gitignore-style patterns here.\n";
+            File.WriteAllText(path, DefaultGlobalIgnoreContents);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
 
-            File.WriteAllText(path, contents);
+    internal static bool TryResetGlobalIgnoreFile(out string path, out string? error)
+    {
+        path = GetGlobalIgnorePath();
+        error = null;
+
+        try
+        {
+            File.WriteAllText(path, DefaultGlobalIgnoreContents);
             return true;
         }
         catch (Exception ex)
@@ -77,6 +93,34 @@ internal static class AppPaths
                 File.Delete(path);
             }
 
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    internal static bool TryOpenGlobalIgnoreFile(out string path, out string? error)
+    {
+        path = GetGlobalIgnorePath();
+        error = null;
+
+        try
+        {
+            if (!File.Exists(path))
+            {
+                File.WriteAllText(path, DefaultGlobalIgnoreContents);
+            }
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true,
+            };
+
+            Process.Start(startInfo);
             return true;
         }
         catch (Exception ex)

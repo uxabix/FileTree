@@ -11,6 +11,13 @@ internal class Program
 {
     private static int Main(string[] args)
     {
+        if (TryHandleConfigRules(args, out var configExitCode))
+        {
+            Console.WriteLine("Press any key to exit...");
+            Console.ReadKey();
+            return configExitCode;
+        }
+
         EnsureGlobalIgnoreFileOnStartup(args);
 
         int res = Parser.Default
@@ -341,6 +348,76 @@ internal class Program
         Console.WriteLine($"Executable directory: {exeDirectory}");
         Console.WriteLine($"Global ignore file: {ignorePath}");
         return 0;
+    }
+
+    private static bool TryHandleConfigRules(string[] args, out int exitCode)
+    {
+        exitCode = 0;
+
+        if (args.Length == 0)
+        {
+            return false;
+        }
+
+        if (!string.Equals(args[0], "config", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (args.Length < 2 || !string.Equals(args[1], "rules", StringComparison.OrdinalIgnoreCase))
+        {
+            PrintConfigRulesHelp();
+            exitCode = 1;
+            return true;
+        }
+
+        if (args.Length == 2)
+        {
+            if (!AppPaths.TryOpenGlobalIgnoreFile(out var path, out var error))
+            {
+                Console.Error.WriteLine($"Error: Could not open global ignore file at '{path}': {error}");
+                exitCode = 1;
+            }
+
+            return true;
+        }
+
+        if (args.Length >= 3)
+        {
+            var action = args[2];
+            if (string.Equals(action, "path", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine(AppPaths.GetGlobalIgnorePath());
+                return true;
+            }
+
+            if (string.Equals(action, "reset", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!AppPaths.TryResetGlobalIgnoreFile(out var path, out var error))
+                {
+                    Console.Error.WriteLine($"Error: Could not reset global ignore file at '{path}': {error}");
+                    exitCode = 1;
+                }
+                else
+                {
+                    Console.WriteLine($"Reset global ignore file: {path}");
+                }
+
+                return true;
+            }
+        }
+
+        PrintConfigRulesHelp();
+        exitCode = 1;
+        return true;
+    }
+
+    private static void PrintConfigRulesHelp()
+    {
+        Console.WriteLine("Usage:");
+        Console.WriteLine("  FileTree config rules        Open global ignore file in default editor");
+        Console.WriteLine("  FileTree config rules path   Show global ignore file path");
+        Console.WriteLine("  FileTree config rules reset  Reset global ignore file to defaults");
     }
 
     private static async Task<int> RunInstallAsync()
