@@ -40,17 +40,25 @@ namespace FileTree.Core.Scanning
             // Load custom filter rules
             GitIgnoreRules? filterRules = null;
 
-            // Check if new-style filtering is configured
+            // Load new-style filtering if configured
             if (options.Filter.RulesSource != null)
             {
                 var loader = new FilterRulesLoader();
                 filterRules = loader.LoadFilterRules(options.Filter.RulesSource);
             }
-            // Fall back to converting legacy filters if present
-            else if (LegacyFilterConverter.HasLegacyFilters(options.Filter))
+
+            // Merge legacy filters (if any) into gitignore-style rules for backward compatibility
+            if (LegacyFilterConverter.HasLegacyFilters(options.Filter))
             {
                 var legacyRules = LegacyFilterConverter.ConvertToGitIgnoreRules(options.Filter);
-                filterRules = GitIgnoreParser.FromLines(legacyRules);
+                if (filterRules == null)
+                {
+                    filterRules = GitIgnoreParser.FromLines(legacyRules);
+                }
+                else
+                {
+                    filterRules.Add(legacyRules);
+                }
             }
 
             _inclusionEvaluator = new ScanInclusionEvaluator(fullRootPath, options, gitIgnore, filterRules);

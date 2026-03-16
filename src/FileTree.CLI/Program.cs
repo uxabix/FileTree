@@ -11,13 +11,16 @@ internal class Program
 {
     private static int Main(string[] args)
     {
+        EnsureGlobalIgnoreFileOnStartup(args);
+
         int res = Parser.Default
-            .ParseArguments<ScanCommandOptions, InstallCommandOptions, UninstallCommandOptions, UninstallDeepCommandOptions>(args)
+            .ParseArguments<ScanCommandOptions, InstallCommandOptions, UninstallCommandOptions, UninstallDeepCommandOptions, PathsCommandOptions>(args)
             .MapResult(
                 (ScanCommandOptions opts) => RunScan(opts),
                 (InstallCommandOptions _) => RunInstallAsync().GetAwaiter().GetResult(),
                 (UninstallCommandOptions _) => RunUninstallAsync().GetAwaiter().GetResult(),
                 (UninstallDeepCommandOptions _) => RunUninstallDeepAsync().GetAwaiter().GetResult(),
+                (PathsCommandOptions _) => RunPaths(),
                 _ => 1);
         Console.WriteLine("Press any key to exit...");
         Console.ReadKey();
@@ -54,6 +57,7 @@ internal class Program
             Format = opts.Format ?? OutputFormat.Ascii,
             Filter = new FilterOptions
             {
+                RulesSource = BuildFilterRulesSource(opts),
                 IncludeExtensions = opts.IncludeExtensions?.ToList() ?? new List<string>(),
                 ExcludeExtensions = opts.ExcludeExtensions?.ToList() ?? new List<string>(),
                 IncludeNames = opts.IncludeNames?.ToList() ?? new List<string>(),
@@ -212,6 +216,31 @@ internal class Program
             target.ExcludeNames = source.ExcludeNames;
         }
 
+        if (source.FilterRules is not null)
+        {
+            target.FilterRules = source.FilterRules;
+        }
+
+        if (!string.IsNullOrWhiteSpace(source.FilterFile))
+        {
+            target.FilterFile = source.FilterFile;
+        }
+
+        if (!string.IsNullOrWhiteSpace(source.GlobalFilterFile))
+        {
+            target.GlobalFilterFile = source.GlobalFilterFile;
+        }
+
+        if (source.NoDefaultFilters)
+        {
+            target.NoDefaultFilters = source.NoDefaultFilters;
+        }
+
+        if (source.NoAppGlobalIgnore)
+        {
+            target.NoAppGlobalIgnore = source.NoAppGlobalIgnore;
+        }
+
         if (source.IgnoreEmptyFolders)
         {
             target.IgnoreEmptyFolders = source.IgnoreEmptyFolders;
@@ -264,6 +293,54 @@ internal class Program
         }
 
         return args.ToArray();
+    }
+
+    private static FilterRulesSource BuildFilterRulesSource(ScanCommandOptions opts)
+    {
+        var inlineRules = opts.FilterRules?
+            .Where(rule => !string.IsNullOrWhiteSpace(rule))
+            .Select(rule => rule.Trim())
+            .ToList() ?? new List<string>();
+
+        return new FilterRulesSource
+        {
+            AppGlobalConfigPath = AppPaths.GetGlobalIgnorePath(),
+            UseAppGlobalConfig = !opts.NoAppGlobalIgnore,
+            UseDefaultGlobalConfig = !opts.NoDefaultFilters,
+            GlobalConfigPath = opts.GlobalFilterFile,
+            LocalConfigPath = opts.FilterFile,
+            InlineRules = inlineRules,
+        };
+    }
+
+    private static void EnsureGlobalIgnoreFileOnStartup(string[] args)
+    {
+        if (args.Length > 0)
+        {
+            var command = args[0];
+            if (string.Equals(command, "uninstall", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(command, "uninstall-deep", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+        }
+
+        if (!AppPaths.TryEnsureGlobalIgnoreFileExists(out var path, out var error))
+        {
+            Console.Error.WriteLine($"Warning: Could not create global ignore file at '{path}': {error}");
+        }
+    }
+
+    private static int RunPaths()
+    {
+        var exePath = AppPaths.GetExecutablePath();
+        var exeDirectory = AppPaths.GetExecutableDirectory();
+        var ignorePath = AppPaths.GetGlobalIgnorePath();
+
+        Console.WriteLine($"Executable: {exePath}");
+        Console.WriteLine($"Executable directory: {exeDirectory}");
+        Console.WriteLine($"Global ignore file: {ignorePath}");
+        return 0;
     }
 
     private static async Task<int> RunInstallAsync()

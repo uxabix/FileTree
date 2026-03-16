@@ -2,6 +2,7 @@ using System.Runtime.Versioning;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
+using FileTree.CLI;
 
 namespace FileTree.CLI.SystemIntegrator;
 
@@ -36,6 +37,7 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
     {
         var exePath = GetExecutablePath();
         var exeDirectory = Path.GetDirectoryName(exePath)!;
+        var ignorePath = AppPaths.GetGlobalIgnorePath();
 
         var alreadyInPath = IsDirectoryInUserPath(exeDirectory);
         var contextMenuExists = ContextMenuExists();
@@ -44,6 +46,18 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
         {
             Console.WriteLine("FileTree is already installed for the current user.");
             return Task.CompletedTask;
+        }
+
+        if (!File.Exists(ignorePath))
+        {
+            if (AppPaths.TryEnsureGlobalIgnoreFileExists(out _, out var error))
+            {
+                Console.WriteLine("+ Created FileTree.ignore");
+            }
+            else
+            {
+                Console.WriteLine($"! Failed to create FileTree.ignore: {error}");
+            }
         }
 
         if (!alreadyInPath)
@@ -69,6 +83,7 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
     {
         var exePath = GetExecutablePath();
         var exeDirectory = Path.GetDirectoryName(exePath)!;
+        var ignorePath = AppPaths.GetGlobalIgnorePath();
 
         var removedShims = RemoveCommandShims(exePath);
         if (removedShims)
@@ -98,6 +113,18 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
             BroadcastEnvironmentChange();
         }
 
+        if (File.Exists(ignorePath))
+        {
+            if (AppPaths.TryDeleteGlobalIgnoreFile(out _, out var error))
+            {
+                Console.WriteLine("+ Removed FileTree.ignore");
+            }
+            else
+            {
+                Console.WriteLine($"! Failed to remove FileTree.ignore: {error}");
+            }
+        }
+
         return Task.CompletedTask;
     }
 
@@ -105,6 +132,7 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
     {
         var exePath = GetExecutablePath();
         var exeDirectory = Path.GetDirectoryName(exePath)!;
+        var ignorePath = AppPaths.GetGlobalIgnorePath();
 
         Console.WriteLine("Searching for FileTree entries created by any installation...");
 
@@ -122,6 +150,18 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
         else
         {
             Console.WriteLine("No FileTree entries were removed.");
+        }
+
+        if (File.Exists(ignorePath))
+        {
+            if (AppPaths.TryDeleteGlobalIgnoreFile(out _, out var error))
+            {
+                Console.WriteLine("+ Removed FileTree.ignore");
+            }
+            else
+            {
+                Console.WriteLine($"! Failed to remove FileTree.ignore: {error}");
+            }
         }
 
         return Task.CompletedTask;

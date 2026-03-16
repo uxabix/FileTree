@@ -9,7 +9,7 @@ namespace FileTree.Core.Filtering;
 
 /// <summary>
 /// Loads filtering rules from multiple sources and combines them into a single GitIgnoreRules instance.
-/// Rules are applied in order of precedence: Global config -> Local config -> Inline rules.
+/// Rules are applied in order of precedence: App global -> Default global -> Custom global -> Local config -> Inline rules.
 /// </summary>
 internal class FilterRulesLoader
 {
@@ -30,7 +30,16 @@ internal class FilterRulesLoader
         // Load rules in order of precedence (lowest to highest)
         // Later rules can override earlier ones using negation patterns (!)
 
-        // 1. Load default global configuration from user's home directory
+        // 1. Load app-level global configuration (e.g., FileTree.ignore near the executable)
+        if (source.UseAppGlobalConfig && !string.IsNullOrWhiteSpace(source.AppGlobalConfigPath))
+        {
+            if (File.Exists(source.AppGlobalConfigPath))
+            {
+                LoadRulesFromFile(rules, source.AppGlobalConfigPath);
+            }
+        }
+
+        // 2. Load default global configuration from user's home directory
         if (source.UseDefaultGlobalConfig)
         {
             string? defaultGlobalPath = GetDefaultGlobalConfigPath();
@@ -40,19 +49,19 @@ internal class FilterRulesLoader
             }
         }
 
-        // 2. Load custom global configuration if specified
+        // 3. Load custom global configuration if specified
         if (!string.IsNullOrWhiteSpace(source.GlobalConfigPath))
         {
             LoadRulesFromFile(rules, source.GlobalConfigPath);
         }
 
-        // 3. Load local configuration file if specified
+        // 4. Load local configuration file if specified
         if (!string.IsNullOrWhiteSpace(source.LocalConfigPath))
         {
             LoadRulesFromFile(rules, source.LocalConfigPath);
         }
 
-        // 4. Add inline rules (highest precedence)
+        // 5. Add inline rules (highest precedence)
         if (source.InlineRules.Any())
         {
             rules.Add(source.InlineRules);

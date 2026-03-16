@@ -8,6 +8,17 @@ namespace FileTree.Core.Models;
 public class FilterRulesSource
 {
     /// <summary>
+    /// Path to the app-level global filter configuration file (e.g., FileTree.ignore in the app directory).
+    /// If null, no app-level global config will be loaded.
+    /// </summary>
+    public string? AppGlobalConfigPath { get; set; }
+
+    /// <summary>
+    /// Whether to load the app-level global configuration file.
+    /// </summary>
+    public bool UseAppGlobalConfig { get; set; } = true;
+
+    /// <summary>
     /// Filtering rules provided directly (e.g., from CLI arguments).
     /// These rules use gitignore-style syntax.
     /// </summary>
