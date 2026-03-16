@@ -1,5 +1,7 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using FileTree.Core.Filtering;
 using FileTree.Core.GitIgnore;
@@ -10,10 +12,14 @@ namespace FileTree.Core.Scanning
     internal class ScanInclusionEvaluator
     {
         private readonly GitIgnoreRules? _gitIgnoreRules;
-        private readonly GitIgnoreRules? _filterRules;
+        private GitIgnoreRules? _filterRules;
         private readonly IFileFilter? _legacyFileFilter;
         private readonly string _rootPath;
         private readonly FileTreeOptions _options;
+        private readonly List<List<string>> _localRulesStack = new();
+        private readonly List<string> _baseFilterRules;
+        private readonly bool _useLocalFilterFiles;
+        private const string LocalIgnoreFileName = ".filetreeignore";
 
         /// <summary>
         /// Creates a new instance of ScanInclusionEvaluator.
@@ -26,19 +32,24 @@ namespace FileTree.Core.Scanning
             string rootPath,
             FileTreeOptions options,
             GitIgnoreRules? gitIgnoreRules,
-            GitIgnoreRules? filterRules = null)
+            IReadOnlyList<string>? filterRules = null)
         {
             _rootPath = Path.GetFullPath(rootPath);
             _options = options;
             _gitIgnoreRules = gitIgnoreRules;
-            _filterRules = filterRules;
+            _baseFilterRules = filterRules?.Where(rule => !string.IsNullOrWhiteSpace(rule))
+                .Select(rule => rule.Trim())
+                .ToList() ?? new List<string>();
+            _useLocalFilterFiles = options.Filter.UseLocalFilterFiles;
 
             // For backward compatibility, create legacy file filter if no new-style filter rules provided
             // and legacy filter options are present
-            if (_filterRules == null && LegacyFilterConverter.HasLegacyFilters(options.Filter))
+            if (_baseFilterRules.Count == 0 && LegacyFilterConverter.HasLegacyFilters(options.Filter))
             {
                 _legacyFileFilter = new FileFilter(options.Filter);
             }
+
+            RebuildFilterRules();
         }
 
         private bool IsHidden(FileSystemInfo item)
@@ -109,5 +120,144 @@ namespace FileTree.Core.Scanning
 
             return true;
         }
+
+        public bool EnterDirectory(DirectoryInfo dirInfo)
+        {
+            if (!_useLocalFilterFiles)
+            {
+                return false;
+            }
+
+            var ignorePath = Path.Combine(dirInfo.FullName, LocalIgnoreFileName);
+            if (!File.Exists(ignorePath))
+            {
+                return false;
+            }
+
+            var rules = LoadLocalRules(ignorePath, dirInfo.FullName);
+            if (rules.Count == 0)
+            {
+                return false;
+            }
+
+            _localRulesStack.Add(rules);
+            RebuildFilterRules();
+            return true;
+        }
+
+        public void ExitDirectory(bool hadRules)
+        {
+            if (!hadRules)
+            {
+                return;
+            }
+
+            if (_localRulesStack.Count == 0)
+            {
+                return;
+            }
+
+            _localRulesStack.RemoveAt(_localRulesStack.Count - 1);
+            RebuildFilterRules();
+        }
+
+        private void RebuildFilterRules()
+        {
+            if (_baseFilterRules.Count == 0 && _localRulesStack.Count == 0)
+            {
+                _filterRules = null;
+                return;
+            }
+
+            var rules = new GitIgnoreRules();
+            if (_baseFilterRules.Count > 0)
+            {
+                rules.Add(_baseFilterRules);
+            }
+
+            foreach (var stackRules in _localRulesStack)
+            {
+                rules.Add(stackRules);
+            }
+
+            _filterRules = rules;
+        }
+
+        private List<string> LoadLocalRules(string filePath, string directoryPath)
+        {
+            var rules = new List<string>();
+            var relativeDir = NormalizeRelativeDirectory(Path.GetRelativePath(_rootPath, directoryPath));
+            var lines = File.ReadAllLines(filePath);
+
+            foreach (var line in lines)
+            {
+                var trimmed = line?.Trim();
+                if (string.IsNullOrEmpty(trimmed))
+                {
+                    continue;
+                }
+
+                if (trimmed.StartsWith("#", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var isNegation = trimmed.StartsWith("!", StringComparison.Ordinal);
+                var pattern = isNegation ? trimmed.Substring(1) : trimmed;
+                if (string.IsNullOrEmpty(pattern))
+                {
+                    continue;
+                }
+
+                foreach (var expanded in ExpandPattern(pattern, relativeDir))
+                {
+                    var finalRule = isNegation ? "!" + expanded : expanded;
+                    rules.Add(finalRule);
+                }
+            }
+
+            return rules;
+        }
+
+        private static string NormalizeRelativeDirectory(string relativeDir)
+        {
+            if (string.IsNullOrWhiteSpace(relativeDir) || relativeDir == ".")
+            {
+                return string.Empty;
+            }
+
+            return relativeDir.Replace('\\', '/').Trim('/');
+        }
+
+        private static IEnumerable<string> ExpandPattern(string pattern, string relativeDir)
+        {
+            var normalized = pattern.Replace('\\', '/');
+            var hasPrefix = !string.IsNullOrEmpty(relativeDir);
+            var prefix = hasPrefix ? relativeDir.TrimEnd('/') + "/" : string.Empty;
+
+            if (!hasPrefix)
+            {
+                yield return normalized;
+                yield break;
+            }
+
+            if (normalized.StartsWith("/", StringComparison.Ordinal))
+            {
+                yield return prefix + normalized.Substring(1);
+                yield break;
+            }
+
+            if (normalized.Contains("/", StringComparison.Ordinal))
+            {
+                yield return prefix + normalized;
+                yield break;
+            }
+
+            // No slash in pattern: match any level under this directory.
+            yield return prefix + normalized;
+            yield return prefix + "**/" + normalized;
+        }
     }
 }
+
+

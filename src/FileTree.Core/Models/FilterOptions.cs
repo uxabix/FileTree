@@ -15,6 +15,11 @@ public class FilterOptions
     /// </summary>
     public bool IgnoreEmptyFolders { get; set; }
 
+    /// <summary>
+    /// Whether to load local .filetreeignore files during scanning.
+    /// </summary>
+    public bool UseLocalFilterFiles { get; set; } = true;
+
     // ============================================================================
     // Legacy filtering properties (deprecated)
     // These properties are maintained for backward compatibility and will be

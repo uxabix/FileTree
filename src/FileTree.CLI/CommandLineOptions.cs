@@ -46,6 +46,9 @@ public class ScanCommandOptions
     [Option('!', "no-app-global-ignore", HelpText = "Don't load app-level global filter file (FileTree.ignore near the executable).", Required = false)]
     public bool NoAppGlobalIgnore { get; set; }
 
+    [Option("no-local-filters", HelpText = "Don't load local .filetreeignore files from the directory tree.", Required = false)]
+    public bool NoLocalFilters { get; set; }
+
     // ============================================================================
     // Legacy filtering options (deprecated but maintained for backward compatibility)
     // ============================================================================

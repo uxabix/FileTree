@@ -70,6 +70,7 @@ internal class Program
                 IncludeNames = opts.IncludeNames?.ToList() ?? new List<string>(),
                 ExcludeNames = opts.ExcludeNames?.ToList() ?? new List<string>(),
                 IgnoreEmptyFolders = opts.IgnoreEmptyFolders,
+                UseLocalFilterFiles = !opts.NoLocalFilters,
             }
         };
 
@@ -246,6 +247,11 @@ internal class Program
         if (source.NoAppGlobalIgnore)
         {
             target.NoAppGlobalIgnore = source.NoAppGlobalIgnore;
+        }
+
+        if (source.NoLocalFilters)
+        {
+            target.NoLocalFilters = source.NoLocalFilters;
         }
 
         if (source.IgnoreEmptyFolders)
