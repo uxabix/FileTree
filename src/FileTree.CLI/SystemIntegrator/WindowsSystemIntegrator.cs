@@ -101,6 +101,32 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
         return Task.CompletedTask;
     }
 
+    public Task UninstallDeepAsync()
+    {
+        var exePath = GetExecutablePath();
+        var exeDirectory = Path.GetDirectoryName(exePath)!;
+
+        Console.WriteLine("Searching for FileTree entries created by any installation...");
+
+        var removedAny = false;
+        removedAny |= PromptAndRemovePathEntries(exeDirectory);
+        removedAny |= PromptAndRemoveCommandShims(exePath);
+        removedAny |= PromptAndRemovePowerShellAliases(exePath);
+        removedAny |= PromptAndRemoveContextMenuEntries(exePath);
+
+        if (removedAny)
+        {
+            BroadcastEnvironmentChange();
+            Console.WriteLine("Uninstall-deep completed.");
+        }
+        else
+        {
+            Console.WriteLine("No FileTree entries were removed.");
+        }
+
+        return Task.CompletedTask;
+    }
+
     private static string GetExecutablePath()
     {
         var path = Environment.ProcessPath;
@@ -259,10 +285,10 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
         AddContextMenuForKey(DirectoryBackgroundMenuKey, exePath, "");
         
         // Customizable call
-        AddContextMenuForKey(DirectoryMenuKeyCustom, exePath, "\"%1\" --wait true", "FileTree Customizable");
-        AddContextMenuForKey(FileMenuKeyCustom, exePath, "\"%1\" --wait true", "FileTree Customizable");
-        AddContextMenuForKey(DesktopMenuKeyCustom, exePath, "--wait true", "FileTree Customizable");
-        AddContextMenuForKey(DirectoryBackgroundMenuKeyCustom, exePath, "--wait true", "FileTree Customizable");
+        AddContextMenuForKey(DirectoryMenuKeyCustom, exePath, "\"%1\" --wait", "FileTree Customizable");
+        AddContextMenuForKey(FileMenuKeyCustom, exePath, "\"%1\" --wait", "FileTree Customizable");
+        AddContextMenuForKey(DesktopMenuKeyCustom, exePath, "--wait", "FileTree Customizable");
+        AddContextMenuForKey(DirectoryBackgroundMenuKeyCustom, exePath, "--wait", "FileTree Customizable");
     }
     
     private static void AddContextMenuForKey(
@@ -292,6 +318,11 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
         removedAny |= RemoveContextMenuKey(DirectoryMenuKey);
         removedAny |= RemoveContextMenuKey(FileMenuKey);
         removedAny |= RemoveContextMenuKey(DesktopMenuKey);
+        removedAny |= RemoveContextMenuKey(DirectoryBackgroundMenuKey);
+        removedAny |= RemoveContextMenuKey(DirectoryMenuKeyCustom);
+        removedAny |= RemoveContextMenuKey(FileMenuKeyCustom);
+        removedAny |= RemoveContextMenuKey(DesktopMenuKeyCustom);
+        removedAny |= RemoveContextMenuKey(DirectoryBackgroundMenuKeyCustom);
 
         return removedAny;
     }
@@ -300,13 +331,19 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
     {
         try
         {
-            using var parent = Registry.CurrentUser.OpenSubKey(
-                Path.GetDirectoryName(keyPath)!, writable: true);
+            var parentPath = Path.GetDirectoryName(keyPath);
+            var subKeyName = Path.GetFileName(keyPath);
+            if (string.IsNullOrWhiteSpace(parentPath) || string.IsNullOrWhiteSpace(subKeyName))
+            {
+                return false;
+            }
+
+            using var parent = Registry.CurrentUser.OpenSubKey(parentPath, writable: true);
 
             if (parent == null)
                 return false;
 
-            parent.DeleteSubKeyTree("FileTree", throwOnMissingSubKey: false);
+            parent.DeleteSubKeyTree(subKeyName, throwOnMissingSubKey: false);
             return true;
         }
         catch
@@ -319,6 +356,258 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
     {
         return Path.GetFullPath(path.Trim());
     }
+
+    private static bool PromptAndRemovePathEntries(string exeDirectory)
+    {
+        var userPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User);
+        if (string.IsNullOrEmpty(userPath))
+        {
+            return false;
+        }
+
+        var segments = userPath.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+        if (segments.Count == 0)
+        {
+            return false;
+        }
+
+        var updated = new List<string>(segments.Count);
+        var removedAny = false;
+
+        foreach (var segment in segments)
+        {
+            var isCurrent = PathsEqual(segment, exeDirectory);
+            if (isCurrent || segment.IndexOf("FileTree", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                var label = OwnershipLabel(isCurrent);
+                if (PromptYesNo($"PATH entry: {segment} ({label}) Remove?"))
+                {
+                    removedAny = true;
+                    continue;
+                }
+            }
+
+            updated.Add(segment);
+        }
+
+        if (removedAny)
+        {
+            Environment.SetEnvironmentVariable("PATH", string.Join(';', updated), EnvironmentVariableTarget.User);
+            Console.WriteLine("+ Updated user PATH");
+        }
+
+        return removedAny;
+    }
+
+    private static bool PromptAndRemoveCommandShims(string exePath)
+    {
+        var exeDirectory = Path.GetDirectoryName(exePath)!;
+        var directories = GetUserPathDirectories();
+
+        if (!directories.Any(d => PathsEqual(d, exeDirectory)))
+        {
+            directories.Add(exeDirectory);
+        }
+
+        var removedAny = false;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var directory in directories)
+        {
+            if (!seen.Add(NormalizePath(directory)))
+            {
+                continue;
+            }
+
+            var fileTreeBat = Path.Combine(directory, "FileTree.bat");
+            var ftBat = Path.Combine(directory, "FT.bat");
+
+            removedAny |= PromptAndRemoveShim(fileTreeBat, exePath);
+            removedAny |= PromptAndRemoveShim(ftBat, exePath);
+        }
+
+        return removedAny;
+    }
+
+    private static bool PromptAndRemoveShim(string shimPath, string exePath)
+    {
+        if (!File.Exists(shimPath))
+        {
+            return false;
+        }
+
+        var isCurrent = PathsEqual(Path.GetDirectoryName(shimPath)!, Path.GetDirectoryName(exePath)!);
+        try
+        {
+            var contents = File.ReadAllText(shimPath);
+            if (contents.IndexOf(exePath, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                isCurrent = true;
+            }
+        }
+        catch
+        {
+            // Best-effort; continue.
+        }
+
+        var label = OwnershipLabel(isCurrent);
+        if (PromptYesNo($"Command shim: {shimPath} ({label}) Remove?"))
+        {
+            File.Delete(shimPath);
+            Console.WriteLine($"+ Removed {Path.GetFileName(shimPath)}");
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool PromptAndRemovePowerShellAliases(string exePath)
+    {
+        var profilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            "PowerShell", "Microsoft.PowerShell_profile.ps1");
+
+        if (!File.Exists(profilePath))
+        {
+            return false;
+        }
+
+        var lines = File.ReadAllLines(profilePath);
+        var updated = new List<string>(lines.Length);
+        var removedAny = false;
+
+        foreach (var line in lines)
+        {
+            var isCandidate =
+                line.IndexOf("FileTree", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                line.IndexOf("Set-Alias FT", StringComparison.OrdinalIgnoreCase) >= 0;
+
+            if (isCandidate)
+            {
+                var isCurrent = line.IndexOf(exePath, StringComparison.OrdinalIgnoreCase) >= 0;
+                var label = OwnershipLabel(isCurrent);
+                var display = line.Trim();
+                if (PromptYesNo($"PowerShell profile entry: {display} ({label}) Remove?"))
+                {
+                    removedAny = true;
+                    continue;
+                }
+            }
+
+            updated.Add(line);
+        }
+
+        if (removedAny)
+        {
+            File.WriteAllLines(profilePath, updated);
+            Console.WriteLine("+ Updated PowerShell profile");
+        }
+
+        return removedAny;
+    }
+
+    private static bool PromptAndRemoveContextMenuEntries(string exePath)
+    {
+        var removedAny = false;
+
+        foreach (var parentPath in ContextMenuParentKeys)
+        {
+            using var parentKey = Registry.CurrentUser.OpenSubKey(parentPath, writable: true);
+            if (parentKey is null)
+            {
+                continue;
+            }
+
+            foreach (var subKeyName in parentKey.GetSubKeyNames())
+            {
+                if (subKeyName.IndexOf("FileTree", StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    continue;
+                }
+
+                string? command = null;
+                string? icon = null;
+                using (var subKey = parentKey.OpenSubKey(subKeyName))
+                {
+                    command = subKey?.OpenSubKey("command")?.GetValue(string.Empty) as string;
+                    icon = subKey?.GetValue("Icon") as string;
+                }
+                var isCurrent = ContainsIgnoreCase(command, exePath) || ContainsIgnoreCase(icon, exePath);
+
+                var label = OwnershipLabel(isCurrent);
+                var display = $@"HKCU\{parentPath}\{subKeyName}";
+                if (PromptYesNo($"Context menu entry: {display} ({label}) Remove?"))
+                {
+                    parentKey.DeleteSubKeyTree(subKeyName, throwOnMissingSubKey: false);
+                    Console.WriteLine($"+ Removed context menu entry {subKeyName}");
+                    removedAny = true;
+                }
+            }
+        }
+
+        return removedAny;
+    }
+
+    private static List<string> GetUserPathDirectories()
+    {
+        var userPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User);
+        if (string.IsNullOrEmpty(userPath))
+        {
+            return new List<string>();
+        }
+
+        return userPath.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+    }
+
+    private static bool PromptYesNo(string prompt)
+    {
+        while (true)
+        {
+            Console.Write($"{prompt} [y/N]: ");
+            var input = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return false;
+            }
+
+            if (input.Equals("y", StringComparison.OrdinalIgnoreCase) ||
+                input.Equals("yes", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (input.Equals("n", StringComparison.OrdinalIgnoreCase) ||
+                input.Equals("no", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+    }
+
+    private static string OwnershipLabel(bool isCurrent)
+    {
+        return isCurrent ? "current install" : "other install";
+    }
+
+    private static bool PathsEqual(string pathA, string pathB)
+    {
+        return string.Equals(NormalizePath(pathA), NormalizePath(pathB), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsIgnoreCase(string? source, string value)
+    {
+        return !string.IsNullOrEmpty(source) &&
+               source.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private static readonly string[] ContextMenuParentKeys =
+    {
+        @"Software\Classes\Directory\shell",
+        @"Software\Classes\*\shell",
+        @"Software\Classes\DesktopBackground\shell",
+        @"Software\Classes\Directory\Background\shell",
+    };
 
     private static void BroadcastEnvironmentChange()
     {

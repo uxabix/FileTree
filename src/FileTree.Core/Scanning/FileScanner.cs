@@ -15,24 +15,27 @@ namespace FileTree.Core.Scanning
         private bool _ignoreEmptyFolders;
         private ScanInclusionEvaluator? _inclusionEvaluator;
 
-        public FileNode Scan(string rootPath, FileTreeOptions options)
+    /// <summary>
+    /// Scans the directory tree starting from the specified root path.
+    /// </summary>
+    /// <param name="rootPath">Validated full path to the root directory (caller must validate existence).</param>
+    /// <param name="options">Scanning options.</param>
+    /// <returns>FileNode representing the scanned tree.</returns>
+    public FileNode Scan(string rootPath, FileTreeOptions options)
+    {
+        string fullRootPath = Path.GetFullPath(rootPath);
+        _nodeCount = 0;
+
+        // Load .gitignore rules if configured
+        GitIgnoreRules? gitIgnore = null;
+        if (options.UseGitIgnore)
         {
-            if (!Directory.Exists(rootPath))
-                throw new DirectoryNotFoundException(rootPath);
-
-            string fullRootPath = Path.GetFullPath(rootPath);
-            _nodeCount = 0;
-
-            // Load .gitignore rules if configured
-            GitIgnoreRules? gitIgnore = null;
-            if (options.UseGitIgnore)
+            string gitIgnorePath = Path.Combine(fullRootPath, ".gitignore");
+            if (File.Exists(gitIgnorePath))
             {
-                string gitIgnorePath = Path.Combine(fullRootPath, ".gitignore");
-                if (File.Exists(gitIgnorePath))
-                {
-                    gitIgnore = GitIgnoreParser.FromFile(gitIgnorePath);
-                }
+                gitIgnore = GitIgnoreParser.FromFile(gitIgnorePath);
             }
+        }
 
             // Load custom filter rules
             GitIgnoreRules? filterRules = null;
@@ -78,8 +81,7 @@ namespace FileTree.Core.Scanning
                 return;
             }
 
-            if (options.MaxWidth != -1)
-                items = items.Take(options.MaxWidth).ToArray();
+            int visibleCount = 0;
 
             foreach (var item in items)
             {
@@ -91,6 +93,9 @@ namespace FileTree.Core.Scanning
 
                 if (!_inclusionEvaluator.ShouldInclude(item, currentDepth, _nodeCount))
                     continue;
+
+                if (options.MaxWidth != -1 && visibleCount >= options.MaxWidth)
+                    break;
 
                 bool isDir = item is DirectoryInfo;
 
@@ -108,8 +113,13 @@ namespace FileTree.Core.Scanning
                     {
                         parentNode.RemoveChild(node);
                         _nodeCount--;
+                        continue;
                     }
                 }
+
+                visibleCount++;
+                if (options.MaxWidth != -1 && visibleCount >= options.MaxWidth)
+                    break;
             }
         }
     }

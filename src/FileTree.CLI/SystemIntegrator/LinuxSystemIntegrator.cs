@@ -41,6 +41,13 @@ internal sealed class LinuxSystemIntegrator : ISystemIntegrator
         return Task.CompletedTask;
     }
 
+    public Task UninstallDeepAsync()
+    {
+        Console.WriteLine("Uninstall-deep on Linux does not modify your system automatically.");
+        Console.WriteLine("If you added FileTree to PATH or copied it to ~/.local/bin, please remove those changes manually.");
+        return Task.CompletedTask;
+    }
+
     private static string GetExecutablePath()
     {
         var path = Environment.ProcessPath;
@@ -64,4 +71,3 @@ internal sealed class LinuxSystemIntegrator : ISystemIntegrator
         return Path.GetFullPath(path.Trim());
     }
 }
-
