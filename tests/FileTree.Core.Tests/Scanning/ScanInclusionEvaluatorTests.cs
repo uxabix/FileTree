@@ -1,4 +1,5 @@
 ﻿using Xunit;
+using System;
 using System.IO;
 using FileTree.Core.Scanning;
 using FileTree.Core.Models;
@@ -36,10 +37,17 @@ namespace FileTree.Core.Tests.Scanning
         [Fact]
         public void ShouldInclude_SkipHidden_ExcludesHidden()
         {
-            _fixture.CreateFile(".hiddenfile");
+            var hiddenName = OperatingSystem.IsWindows() ? "hiddenfile.txt" : ".hiddenfile";
+            _fixture.CreateFile(hiddenName);
             var options = new FileTreeOptions { SkipHidden = true };
             var evaluator = new ScanInclusionEvaluator(_fixture.RootPath, options, null);
-            var fileInfo = new FileInfo(Path.Combine(_fixture.RootPath, ".hiddenfile"));
+            var hiddenPath = Path.Combine(_fixture.RootPath, hiddenName);
+            if (OperatingSystem.IsWindows())
+            {
+                var attrs = File.GetAttributes(hiddenPath);
+                File.SetAttributes(hiddenPath, attrs | FileAttributes.Hidden);
+            }
+            var fileInfo = new FileInfo(hiddenPath);
 
             Assert.False(evaluator.ShouldInclude(fileInfo, 0, 0));
         }

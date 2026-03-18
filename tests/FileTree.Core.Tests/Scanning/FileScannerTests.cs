@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using Xunit;
@@ -55,7 +55,6 @@ namespace FileTree.Tests.Scanning
                 Filter = overrides.Filter ?? baseOptions.Filter
             };
         }
-
 
         [Fact]
         public void Scan_ShouldFindFilesAndFolders()
@@ -134,15 +133,61 @@ namespace FileTree.Tests.Scanning
                 _scanner.Scan(nonExistentPath, Options());
             });
         }
+
+        [Fact]
+        public void Scan_ShouldSetIsHidden_ForFilesAndDirectories()
+        {
+            var hiddenFileName = OperatingSystem.IsWindows() ? "hidden.txt" : ".hidden.txt";
+            var hiddenFilePath = Path.Combine(_tempRoot, hiddenFileName);
+            File.WriteAllText(hiddenFilePath, "secret");
+            if (OperatingSystem.IsWindows())
+            {
+                var attrs = File.GetAttributes(hiddenFilePath);
+                File.SetAttributes(hiddenFilePath, attrs | FileAttributes.Hidden);
+            }
+
+            var hiddenDirName = OperatingSystem.IsWindows() ? "hidden-dir" : ".hidden-dir";
+            var hiddenDirPath = Path.Combine(_tempRoot, hiddenDirName);
+            Directory.CreateDirectory(hiddenDirPath);
+            if (OperatingSystem.IsWindows())
+            {
+                var attrs = File.GetAttributes(hiddenDirPath);
+                File.SetAttributes(hiddenDirPath, attrs | FileAttributes.Hidden);
+            }
+
+            var rootNode = _scanner.Scan(_tempRoot, Options());
+
+            var hiddenFileNode = rootNode.Children.FirstOrDefault(c => c.Name == hiddenFileName);
+            var hiddenDirNode = rootNode.Children.FirstOrDefault(c => c.Name == hiddenDirName);
+
+            Assert.NotNull(hiddenFileNode);
+            Assert.NotNull(hiddenDirNode);
+            Assert.True(hiddenFileNode.IsHidden);
+            Assert.True(hiddenDirNode.IsHidden);
+        }
+
         [Fact]
         public void Scan_ShouldSkipHiddenFiles_WhenSkipHiddenEnabled()
         {
             File.WriteAllText(Path.Combine(_tempRoot, "visible.txt"), "hello");
 
-            File.WriteAllText(Path.Combine(_tempRoot, ".hidden.txt"), "secret");
+            var hiddenFileName = OperatingSystem.IsWindows() ? "hidden.txt" : ".hidden.txt";
+            var hiddenFilePath = Path.Combine(_tempRoot, hiddenFileName);
+            File.WriteAllText(hiddenFilePath, "secret");
+            if (OperatingSystem.IsWindows())
+            {
+                var attrs = File.GetAttributes(hiddenFilePath);
+                File.SetAttributes(hiddenFilePath, attrs | FileAttributes.Hidden);
+            }
 
-            var hiddenDir = Path.Combine(_tempRoot, ".config");
+            var hiddenDirName = OperatingSystem.IsWindows() ? "hidden-config" : ".config";
+            var hiddenDir = Path.Combine(_tempRoot, hiddenDirName);
             Directory.CreateDirectory(hiddenDir);
+            if (OperatingSystem.IsWindows())
+            {
+                var attrs = File.GetAttributes(hiddenDir);
+                File.SetAttributes(hiddenDir, attrs | FileAttributes.Hidden);
+            }
             File.WriteAllText(Path.Combine(hiddenDir, "inside.txt"), "data");
 
             var options = Options(new FileTreeOptions
@@ -159,9 +204,9 @@ namespace FileTree.Tests.Scanning
             var visible = rootNode.Children.First();
             Assert.Equal("visible.txt", visible.Name);
 
-            Assert.DoesNotContain(rootNode.Children, c => c.Name == ".config");
+            Assert.DoesNotContain(rootNode.Children, c => c.Name == hiddenDirName);
 
-            Assert.DoesNotContain(rootNode.Children, c => c.Name == ".hidden.txt");
+            Assert.DoesNotContain(rootNode.Children, c => c.Name == hiddenFileName);
         }
     }
 }

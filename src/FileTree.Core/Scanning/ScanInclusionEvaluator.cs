@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -52,17 +52,6 @@ namespace FileTree.Core.Scanning
             RebuildFilterRules();
         }
 
-        private bool IsHidden(FileSystemInfo item)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && item.Attributes.HasFlag(FileAttributes.Hidden))
-                return true;
-
-            if (item.Name.StartsWith("."))
-                return true;
-
-            return false;
-        }
-
         /// <summary>
         /// Determines whether a file or directory should be included in the scan results.
         /// </summary>
@@ -81,7 +70,7 @@ namespace FileTree.Core.Scanning
                 return false;
 
             // Skip hidden files/directories if configured
-            if (_options.SkipHidden && IsHidden(item))
+            if (_options.SkipHidden && HiddenFileDetector.IsHidden(item))
                 return false;
 
             // Skip symbolic links and reparse points
