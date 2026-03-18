@@ -43,6 +43,15 @@ public class ScanCommandOptions
     [Option("no-default-filters", HelpText = "Don't load default global filter configuration from ~/.filetreeignore", Required = false)]
     public bool NoDefaultFilters { get; set; }
 
+    [Option('!', "no-app-global-ignore", HelpText = "Don't load app-level global filter file (FileTree.ignore near the executable).", Required = false)]
+    public bool NoAppGlobalIgnore { get; set; }
+
+    [Option("no-local-filters", HelpText = "Don't load local .filetreeignore files from the directory tree.", Required = false)]
+    public bool NoLocalFilters { get; set; }
+
+    [Option("no-default-settings", HelpText = "Don't load default settings from FileTree.Settings.", Required = false)]
+    public bool NoDefaultSettings { get; set; }
+
     // ============================================================================
     // Legacy filtering options (deprecated but maintained for backward compatibility)
     // ============================================================================
@@ -81,5 +90,10 @@ public class UninstallCommandOptions
 
 [Verb("uninstall-deep", HelpText = "Deep uninstall FileTree (search and remove all FileTree entries for the current user).")]
 public class UninstallDeepCommandOptions
+{
+}
+
+[Verb("paths", HelpText = "Show the executable location and global filter file path.")]
+public class PathsCommandOptions
 {
 }

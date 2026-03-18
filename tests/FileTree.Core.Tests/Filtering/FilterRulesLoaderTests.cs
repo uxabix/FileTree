@@ -3,6 +3,7 @@ using System.IO;
 using Xunit;
 using FileTree.Core.Filtering;
 using FileTree.Core.Models;
+using FileTree.Core.GitIgnore;
 
 namespace FileTree.Core.Tests.Filtering;
 
@@ -51,11 +52,12 @@ public class FilterRulesLoaderTests
 
         // Act
         var rules = loader.LoadFilterRules(source);
+        var ignore = GitIgnoreParser.FromLines(rules);
 
         // Assert
         Assert.NotNull(rules);
-        Assert.True(rules.IsIgnored("test.log"));
-        Assert.True(rules.IsIgnored("bin/"));
+        Assert.True(ignore.IsIgnored("test.log"));
+        Assert.True(ignore.IsIgnored("bin/"));
     }
 
     [Fact]
@@ -93,12 +95,13 @@ public class FilterRulesLoaderTests
 
             // Act
             var rules = loader.LoadFilterRules(source);
+            var ignore = GitIgnoreParser.FromLines(rules);
 
             // Assert
             Assert.NotNull(rules);
-            Assert.True(rules.IsIgnored("file.tmp"));
-            Assert.True(rules.IsIgnored("node_modules/"));
-            Assert.False(rules.IsIgnored("file.txt"));
+            Assert.True(ignore.IsIgnored("file.tmp"));
+            Assert.True(ignore.IsIgnored("node_modules/"));
+            Assert.False(ignore.IsIgnored("file.txt"));
         }
         finally
         {
@@ -133,13 +136,14 @@ public class FilterRulesLoaderTests
 
             // Act
             var rules = loader.LoadFilterRules(source);
+            var ignore = GitIgnoreParser.FromLines(rules);
 
             // Assert
             Assert.NotNull(rules);
             // Regular log files should be ignored
-            Assert.True(rules.IsIgnored("test.log"));
+            Assert.True(ignore.IsIgnored("test.log"));
             // But important.log should be included (negation has higher precedence)
-            Assert.False(rules.IsIgnored("important.log"));
+            Assert.False(ignore.IsIgnored("important.log"));
         }
         finally
         {
@@ -172,11 +176,12 @@ public class FilterRulesLoaderTests
 
             // Act
             var rules = loader.LoadFilterRules(source);
+            var ignore = GitIgnoreParser.FromLines(rules);
 
             // Assert
             Assert.NotNull(rules);
-            Assert.True(rules.IsIgnored("test.log"));
-            Assert.False(rules.IsIgnored("critical.log")); // Inline negation overrides file rule
+            Assert.True(ignore.IsIgnored("test.log"));
+            Assert.False(ignore.IsIgnored("critical.log")); // Inline negation overrides file rule
         }
         finally
         {
@@ -213,11 +218,12 @@ bin/
 
             // Act
             var rules = loader.LoadFilterRules(source);
+            var ignore = GitIgnoreParser.FromLines(rules);
 
             // Assert
             Assert.NotNull(rules);
-            Assert.True(rules.IsIgnored("test.log"));
-            Assert.True(rules.IsIgnored("bin/"));
+            Assert.True(ignore.IsIgnored("test.log"));
+            Assert.True(ignore.IsIgnored("bin/"));
         }
         finally
         {

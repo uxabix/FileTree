@@ -76,7 +76,7 @@ namespace FileTree.Core.Tests.Scanning
         public void ShouldInclude_WithFilterRules_ExcludesFiltered()
         {
             _fixture.CreateFile("test.log");
-            var filterRules = GitIgnoreParser.FromLines(new[] { "*.log" });
+            var filterRules = new List<string> { "*.log" };
             var options = new FileTreeOptions();
             var evaluator = new ScanInclusionEvaluator(_fixture.RootPath, options, null, filterRules);
             var fileInfo = new FileInfo(Path.Combine(_fixture.RootPath, "test.log"));
@@ -91,7 +91,7 @@ namespace FileTree.Core.Tests.Scanning
             _fixture.CreateFile("test.tmp");
 
             var gitIgnoreRules = GitIgnoreParser.FromLines(new[] { "*.log" });
-            var filterRules = GitIgnoreParser.FromLines(new[] { "*.tmp" });
+            var filterRules = new List<string> { "*.tmp" };
             var options = new FileTreeOptions { UseGitIgnore = true };
             var evaluator = new ScanInclusionEvaluator(_fixture.RootPath, options, gitIgnoreRules, filterRules);
 

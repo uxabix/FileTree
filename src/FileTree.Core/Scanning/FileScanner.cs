@@ -38,19 +38,20 @@ namespace FileTree.Core.Scanning
         }
 
             // Load custom filter rules
-            GitIgnoreRules? filterRules = null;
+            List<string> filterRules = new();
 
-            // Check if new-style filtering is configured
+            // Load new-style filtering if configured
             if (options.Filter.RulesSource != null)
             {
                 var loader = new FilterRulesLoader();
-                filterRules = loader.LoadFilterRules(options.Filter.RulesSource);
+                filterRules.AddRange(loader.LoadFilterRules(options.Filter.RulesSource));
             }
-            // Fall back to converting legacy filters if present
-            else if (LegacyFilterConverter.HasLegacyFilters(options.Filter))
+
+            // Merge legacy filters (if any) into gitignore-style rules for backward compatibility
+            if (LegacyFilterConverter.HasLegacyFilters(options.Filter))
             {
                 var legacyRules = LegacyFilterConverter.ConvertToGitIgnoreRules(options.Filter);
-                filterRules = GitIgnoreParser.FromLines(legacyRules);
+                filterRules.AddRange(legacyRules);
             }
 
             _inclusionEvaluator = new ScanInclusionEvaluator(fullRootPath, options, gitIgnore, filterRules);
@@ -59,7 +60,9 @@ namespace FileTree.Core.Scanning
             var rootInfo = new DirectoryInfo(fullRootPath);
             var rootNode = new FileNode(rootInfo.Name, rootInfo.FullName, true);
 
+            var rootPushed = _inclusionEvaluator.EnterDirectory(rootInfo);
             PerformScan(rootInfo, rootNode, 0, options);
+            _inclusionEvaluator.ExitDirectory(rootPushed);
             return rootNode;
         }
 
@@ -106,7 +109,10 @@ namespace FileTree.Core.Scanning
 
                 if (isDir)
                 {
-                    PerformScan((DirectoryInfo)item, node, currentDepth + 1, options);
+                    dirInfo = (DirectoryInfo)item;
+                    var pushed = _inclusionEvaluator.EnterDirectory(dirInfo);
+                    PerformScan(dirInfo, node, currentDepth + 1, options);
+                    _inclusionEvaluator.ExitDirectory(pushed);
 
                     // Remove empty folders if IgnoreEmptyFolders is enabled
                     if (_ignoreEmptyFolders && !node.Children.Any())

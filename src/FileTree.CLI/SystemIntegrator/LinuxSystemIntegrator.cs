@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using FileTree.CLI;
 
 namespace FileTree.CLI.SystemIntegrator;
 
@@ -8,6 +9,8 @@ internal sealed class LinuxSystemIntegrator : ISystemIntegrator
     {
         var exePath = GetExecutablePath();
         var exeDirectory = Path.GetDirectoryName(exePath)!;
+        var ignorePath = AppPaths.GetGlobalIgnorePath();
+        var settingsPath = AppPaths.GetGlobalSettingsPath();
 
         var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
         var segments = path.Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -31,20 +34,96 @@ internal sealed class LinuxSystemIntegrator : ISystemIntegrator
         Console.WriteLine();
         Console.WriteLine("No system-wide changes were made automatically.");
 
+        if (!File.Exists(ignorePath))
+        {
+            if (AppPaths.TryEnsureGlobalIgnoreFileExists(out _, out var error))
+            {
+                Console.WriteLine("+ Created FileTree.ignore");
+            }
+            else
+            {
+                Console.WriteLine($"! Failed to create FileTree.ignore: {error}");
+            }
+        }
+
+        if (!File.Exists(settingsPath))
+        {
+            if (AppPaths.TryEnsureGlobalSettingsFileExists(out _, out var error))
+            {
+                Console.WriteLine("+ Created FileTree.Settings");
+            }
+            else
+            {
+                Console.WriteLine($"! Failed to create FileTree.Settings: {error}");
+            }
+        }
+
         return Task.CompletedTask;
     }
 
     public Task UninstallAsync()
     {
+        var ignorePath = AppPaths.GetGlobalIgnorePath();
+        var settingsPath = AppPaths.GetGlobalSettingsPath();
         Console.WriteLine("Uninstall on Linux does not modify your system automatically.");
         Console.WriteLine("If you added FileTree to PATH or copied it to ~/.local/bin, please remove those changes manually.");
+
+        if (File.Exists(ignorePath))
+        {
+            if (AppPaths.TryDeleteGlobalIgnoreFile(out _, out var error))
+            {
+                Console.WriteLine("+ Removed FileTree.ignore");
+            }
+            else
+            {
+                Console.WriteLine($"! Failed to remove FileTree.ignore: {error}");
+            }
+        }
+
+        if (File.Exists(settingsPath))
+        {
+            if (AppPaths.TryDeleteGlobalSettingsFile(out _, out var error))
+            {
+                Console.WriteLine("+ Removed FileTree.Settings");
+            }
+            else
+            {
+                Console.WriteLine($"! Failed to remove FileTree.Settings: {error}");
+            }
+        }
         return Task.CompletedTask;
     }
 
     public Task UninstallDeepAsync()
     {
+        var ignorePath = AppPaths.GetGlobalIgnorePath();
+        var settingsPath = AppPaths.GetGlobalSettingsPath();
         Console.WriteLine("Uninstall-deep on Linux does not modify your system automatically.");
         Console.WriteLine("If you added FileTree to PATH or copied it to ~/.local/bin, please remove those changes manually.");
+
+        if (File.Exists(ignorePath))
+        {
+            if (AppPaths.TryDeleteGlobalIgnoreFile(out _, out var error))
+            {
+                Console.WriteLine("+ Removed FileTree.ignore");
+            }
+            else
+            {
+                Console.WriteLine($"! Failed to remove FileTree.ignore: {error}");
+            }
+        }
+
+        if (File.Exists(settingsPath))
+        {
+            if (AppPaths.TryDeleteGlobalSettingsFile(out _, out var error))
+            {
+                Console.WriteLine("+ Removed FileTree.Settings");
+            }
+            else
+            {
+                Console.WriteLine($"! Failed to remove FileTree.Settings: {error}");
+            }
+        }
         return Task.CompletedTask;
     }
 
