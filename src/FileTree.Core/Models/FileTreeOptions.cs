@@ -7,6 +7,8 @@ public class FileTreeOptions
     public int MaxNodes { get; init; } = -1;
     public bool UseGitIgnore { get; init; }
     public bool SkipHidden { get; init; }
+    public bool HighlightHiddenFiles { get; init; } = true;
+    public HiddenStyle HiddenStyle { get; init; } = HiddenStyle.Prefix;
     public OutputFormat Format { get; init; } = OutputFormat.Ascii;
     public FilterOptions Filter { get; init; } = new();
 }

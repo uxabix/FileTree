@@ -40,7 +40,8 @@ public class FileTreeService : IFileTreeService
         var rootNode = _scanner.Scan(rootPath, options);
 
         var formatter = _formatterFactory.Create(options.Format);
-        return formatter.Format(rootNode);
+        var context = new FormatContext(options);
+        return formatter.Format(rootNode, context);
     }
 
     private void ValidateRootPath(string rootPath)

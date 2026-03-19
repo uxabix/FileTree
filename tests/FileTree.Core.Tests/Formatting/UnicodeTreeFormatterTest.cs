@@ -6,6 +6,16 @@ namespace FileTree.Core.Tests.Formatting;
 
 public class UnicodeTreeFormatterTests
 {
+    private static FormatContext CreateContext()
+    {
+        var options = new FileTreeOptions
+        {
+            Format = OutputFormat.Unicode
+        };
+
+        return new FormatContext(options);
+    }
+
     private static FileNode CreateTree()
     {
         var root = new FileNode("project", "project", true);
@@ -26,7 +36,7 @@ public class UnicodeTreeFormatterTests
         var formatter = new UnicodeTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
         var firstLine = output.Split('\n', System.StringSplitOptions.RemoveEmptyEntries)[0];
 
         Assert.Equal("project", firstLine.TrimEnd());
@@ -38,7 +48,7 @@ public class UnicodeTreeFormatterTests
         var formatter = new UnicodeTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
 
         Assert.Contains("└─ ", output);
         Assert.Contains("├─ ", output);
@@ -50,7 +60,7 @@ public class UnicodeTreeFormatterTests
         var formatter = new UnicodeTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
 
         Assert.Contains("│", output);
     }
@@ -61,7 +71,7 @@ public class UnicodeTreeFormatterTests
         var formatter = new UnicodeTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
 
         Assert.Contains("project", output);
         Assert.Contains("src", output);
@@ -76,7 +86,7 @@ public class UnicodeTreeFormatterTests
         var formatter = new UnicodeTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
 
         Assert.DoesNotContain("|--", output);
         Assert.DoesNotContain("`--", output);
@@ -88,7 +98,7 @@ public class UnicodeTreeFormatterTests
         var formatter = new UnicodeTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
         var lines = output.Split('\n', System.StringSplitOptions.RemoveEmptyEntries);
 
         // Проверяем вложенность: src должен быть дочерним project

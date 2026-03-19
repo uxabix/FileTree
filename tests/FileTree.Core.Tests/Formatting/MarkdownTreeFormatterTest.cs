@@ -6,6 +6,16 @@ namespace FileTree.Core.Tests.Formatting;
 
 public class MarkdownTreeFormatterTests
 {
+    private static FormatContext CreateContext()
+    {
+        var options = new FileTreeOptions
+        {
+            Format = OutputFormat.Markdown
+        };
+
+        return new FormatContext(options);
+    }
+
     private static FileNode CreateTree()
     {
         var root = new FileNode("project", "project", true);
@@ -26,7 +36,7 @@ public class MarkdownTreeFormatterTests
         var formatter = new MarkdownTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
         var firstLine = output.Split('\n', System.StringSplitOptions.RemoveEmptyEntries)[0];
 
         Assert.Equal("project/", firstLine.TrimEnd());
@@ -38,7 +48,7 @@ public class MarkdownTreeFormatterTests
         var formatter = new MarkdownTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
 
         Assert.Contains("project/", output);
         Assert.Contains("src/", output);
@@ -50,7 +60,7 @@ public class MarkdownTreeFormatterTests
         var formatter = new MarkdownTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
 
         Assert.Contains("project/", output);
         Assert.Contains("src/", output);
@@ -65,7 +75,7 @@ public class MarkdownTreeFormatterTests
         var formatter = new MarkdownTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
 
         // No Unicode box-drawing
         Assert.DoesNotContain("└", output);
@@ -83,7 +93,7 @@ public class MarkdownTreeFormatterTests
         var formatter = new MarkdownTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root).Replace("\r\n", "\n");
+        var output = formatter.Format(root, CreateContext()).Replace("\r\n", "\n");
         var lines = output.Split('\n', System.StringSplitOptions.RemoveEmptyEntries);
 
         Assert.Equal("project/", lines[0].TrimEnd());

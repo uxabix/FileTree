@@ -64,6 +64,8 @@ internal class Program
             MaxNodes = opts.MaxNodes ?? -1,
             UseGitIgnore = opts.UseGitIgnore ?? true,
             SkipHidden = opts.SkipHidden ?? true,
+            HighlightHiddenFiles = opts.HighlightHiddenFiles ?? true,
+            HiddenStyle = opts.HiddenStyle ?? HiddenStyle.Suffix,
             Format = opts.Format ?? OutputFormat.Ascii,
             Filter = new FilterOptions
             {
@@ -270,6 +272,16 @@ internal class Program
         if (source.SkipHidden.HasValue)
         {
             target.SkipHidden = source.SkipHidden;
+        }
+
+        if (source.HighlightHiddenFiles.HasValue)
+        {
+            target.HighlightHiddenFiles = source.HighlightHiddenFiles;
+        }
+
+        if (source.HiddenStyle.HasValue)
+        {
+            target.HiddenStyle = source.HiddenStyle;
         }
 
         if (source.Wait)
@@ -676,6 +688,16 @@ internal class Program
         if (!target.SkipHidden.HasValue && defaults.SkipHidden.HasValue)
         {
             target.SkipHidden = defaults.SkipHidden;
+        }
+
+        if (!target.HighlightHiddenFiles.HasValue && defaults.HighlightHiddenFiles.HasValue)
+        {
+            target.HighlightHiddenFiles = defaults.HighlightHiddenFiles;
+        }
+
+        if (!target.HiddenStyle.HasValue && defaults.HiddenStyle.HasValue)
+        {
+            target.HiddenStyle = defaults.HiddenStyle;
         }
 
         if (target.IncludeExtensions is null && defaults.IncludeExtensions is not null)

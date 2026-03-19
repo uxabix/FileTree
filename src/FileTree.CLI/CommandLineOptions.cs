@@ -74,6 +74,12 @@ public class ScanCommandOptions
     [Option('h', "hidden", HelpText = "Exclude hidden files and folders.", Required = false)]
     public bool? SkipHidden { get; set; }
 
+    [Option("highlight-hidden", HelpText = "Highlight hidden files and folders in output.", Required = false)]
+    public bool? HighlightHiddenFiles { get; set; }
+
+    [Option("hidden-style", HelpText = "Hidden file style (Prefix, Suffix, Minimal).", Required = false)]
+    public HiddenStyle? HiddenStyle { get; set; }
+
     [Option("wait", HelpText = "Do not run immediately; enter interactive mode, accept more options, and run on 'show'.", Required = false)]
     public bool Wait { get; set; }
 }
