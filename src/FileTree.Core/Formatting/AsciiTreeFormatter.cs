@@ -8,7 +8,7 @@ internal class AsciiTreeFormatter : ITreeFormatter
     public string Format(FileNode root, FormatContext context)
     {
         var sb = new StringBuilder();
-        sb.AppendLine(NodeNameStyler.Apply(root.Name, root, context));
+        sb.AppendLine(FormatNode(root, context));
         TreeFormatter.Build(
             root,
             sb,
@@ -17,7 +17,17 @@ internal class AsciiTreeFormatter : ITreeFormatter
             "|-- ",
             " ",
             "|   ",
-            node => NodeNameStyler.Apply(node.Name, node, context));
+            node => FormatNode(node, context));
         return sb.ToString();
+    }
+
+    private static string FormatNode(FileNode node, FormatContext context)
+    {
+        if (node.IsCollapsedPlaceholder)
+        {
+            return CollapsePlaceholderFormatter.Format(node, context);
+        }
+
+        return NodeNameStyler.Apply(node.Name, node, context);
     }
 }

@@ -16,11 +16,20 @@ internal class MarkdownTreeFormatter : ITreeFormatter
     {
         var indent = new string(' ', depth * 2);
 
-        var name = node.IsDirectory ? $"{node.Name}/" : node.Name;
-
-        var displayName = NodeNameStyler.Apply(name, node, context);
+        var displayName = FormatNode(node, context);
         sb.AppendLine(indent + displayName);
 
         foreach (var child in node.Children) WriteNode(child, sb, depth + 1, context);
+    }
+
+    private static string FormatNode(FileNode node, FormatContext context)
+    {
+        if (node.IsCollapsedPlaceholder)
+        {
+            return CollapsePlaceholderFormatter.Format(node, context);
+        }
+
+        var name = node.IsDirectory ? $"{node.Name}/" : node.Name;
+        return NodeNameStyler.Apply(name, node, context);
     }
 }

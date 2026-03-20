@@ -27,6 +27,22 @@ public class ScanCommandOptions
     [Option('f', "format", HelpText = "Output format (Ascii, Markdown, Unicode).", Required = false)]
     public OutputFormat? Format { get; set; }
 
+    [Option("collapse-threshold",
+        HelpText = "Collapse directories when item count exceeds this value.", Required = false)]
+    public int? CollapseThreshold { get; set; }
+
+    [Option("collapse-keep-start",
+        HelpText = "Number of items to keep at the start when collapsing.", Required = false)]
+    public int? CollapseKeepStart { get; set; }
+
+    [Option("collapse-keep-end",
+        HelpText = "Number of items to keep at the end when collapsing.", Required = false)]
+    public int? CollapseKeepEnd { get; set; }
+
+    [Option("collapse-style",
+        HelpText = "Collapse placeholder style (Simple, Count, ByExtension).", Required = false)]
+    public CollapseStyle? CollapseStyle { get; set; }
+
     // ============================================================================
     // New gitignore-style filtering options (recommended)
     // ============================================================================

@@ -12,6 +12,10 @@ internal sealed class ScanOptionsState
     public int? MaxNodes { get; set; }
     public bool? UseGitIgnore { get; set; }
     public OutputFormat? Format { get; set; }
+    public int? CollapseThreshold { get; set; }
+    public int? CollapseKeepStart { get; set; }
+    public int? CollapseKeepEnd { get; set; }
+    public CollapseStyle? CollapseStyle { get; set; }
     public IEnumerable<string>? FilterRules { get; set; }
     public string? FilterFile { get; set; }
     public string? GlobalFilterFile { get; set; }
@@ -45,6 +49,10 @@ internal sealed class ScanOptionsState
             MaxNodes = cli.MaxNodes,
             UseGitIgnore = cli.UseGitIgnore,
             Format = cli.Format,
+            CollapseThreshold = cli.CollapseThreshold,
+            CollapseKeepStart = cli.CollapseKeepStart,
+            CollapseKeepEnd = cli.CollapseKeepEnd,
+            CollapseStyle = cli.CollapseStyle,
             FilterRules = cli.FilterRules,
             FilterFile = NormalizePath(cli.FilterFile),
             GlobalFilterFile = NormalizePath(cli.GlobalFilterFile),
@@ -94,6 +102,10 @@ internal sealed class ScanOptionsState
         if (source.MaxNodes.HasValue) MaxNodes = source.MaxNodes;
         if (source.UseGitIgnore.HasValue) UseGitIgnore = source.UseGitIgnore;
         if (source.Format.HasValue) Format = source.Format;
+        if (source.CollapseThreshold.HasValue) CollapseThreshold = source.CollapseThreshold;
+        if (source.CollapseKeepStart.HasValue) CollapseKeepStart = source.CollapseKeepStart;
+        if (source.CollapseKeepEnd.HasValue) CollapseKeepEnd = source.CollapseKeepEnd;
+        if (source.CollapseStyle.HasValue) CollapseStyle = source.CollapseStyle;
         if (source.FilterRules != null) FilterRules = source.FilterRules;
         if (source.FilterFile != null) FilterFile = source.FilterFile;
         if (source.GlobalFilterFile != null) GlobalFilterFile = source.GlobalFilterFile;
@@ -134,6 +146,10 @@ internal sealed class ScanOptionsState
         if (!MaxNodes.HasValue && defaults.MaxNodes.HasValue) MaxNodes = defaults.MaxNodes;
         if (!UseGitIgnore.HasValue && defaults.UseGitIgnore.HasValue) UseGitIgnore = defaults.UseGitIgnore;
         if (!Format.HasValue && defaults.Format.HasValue) Format = defaults.Format;
+        if (!CollapseThreshold.HasValue && defaults.CollapseThreshold.HasValue) CollapseThreshold = defaults.CollapseThreshold;
+        if (!CollapseKeepStart.HasValue && defaults.CollapseKeepStart.HasValue) CollapseKeepStart = defaults.CollapseKeepStart;
+        if (!CollapseKeepEnd.HasValue && defaults.CollapseKeepEnd.HasValue) CollapseKeepEnd = defaults.CollapseKeepEnd;
+        if (!CollapseStyle.HasValue && defaults.CollapseStyle.HasValue) CollapseStyle = defaults.CollapseStyle;
         if (FilterRules == null && defaults.FilterRules != null) FilterRules = defaults.FilterRules;
         if (FilterFile == null && defaults.FilterFile != null) FilterFile = defaults.FilterFile;
         if (GlobalFilterFile == null && defaults.GlobalFilterFile != null) GlobalFilterFile = defaults.GlobalFilterFile;
@@ -164,6 +180,10 @@ internal sealed class ScanOptionsState
             HighlightHiddenFiles = HighlightHiddenFiles ?? true,
             HiddenStyle = HiddenStyle ?? global::FileTree.Core.Models.HiddenStyle.Suffix,
             Format = Format ?? OutputFormat.Ascii,
+            CollapseThreshold = CollapseThreshold,
+            CollapseKeepStart = CollapseKeepStart ?? 1,
+            CollapseKeepEnd = CollapseKeepEnd ?? 1,
+            CollapseStyle = CollapseStyle ?? global::FileTree.Core.Models.CollapseStyle.Count,
             Filter = new FilterOptions
             {
                 RulesSource = BuildFilterRulesSource(),

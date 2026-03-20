@@ -1,6 +1,7 @@
 ﻿using FileTree.Core.Abstractions;
 using FileTree.Core.Formatting;
 using FileTree.Core.Models;
+using FileTree.Core.Processing;
 using FileTree.Core.Scanning;
 using FileTree.Core.Utilities;
 using System.IO;
@@ -11,13 +12,16 @@ public class FileTreeService : IFileTreeService
 {
     private readonly IFileScanner _scanner;
     private readonly TreeFormatterFactory _formatterFactory;
+    private readonly IReadOnlyList<ITreeProcessor> _processors;
 
     internal FileTreeService(
         IFileScanner scanner,
-        TreeFormatterFactory formatterFactory)
+        TreeFormatterFactory formatterFactory,
+        IEnumerable<ITreeProcessor>? processors = null)
     {
         _scanner = scanner;
         _formatterFactory = formatterFactory;
+        _processors = processors?.ToList() ?? new List<ITreeProcessor> { new CollapseProcessor() };
     }
 
     public FileTreeService() : this(new FileScanner(), new TreeFormatterFactory())
@@ -38,6 +42,10 @@ public class FileTreeService : IFileTreeService
         ValidateRootPath(rootPath);
 
         var rootNode = _scanner.Scan(rootPath, options);
+        foreach (var processor in _processors)
+        {
+            rootNode = processor.Process(rootNode, options);
+        }
 
         var formatter = _formatterFactory.Create(options.Format);
         var context = new FormatContext(options);
