@@ -43,6 +43,10 @@ public class ScanCommandOptions
         HelpText = "Collapse placeholder style (Simple, Count, ByExtension).", Required = false)]
     public CollapseStyle? CollapseStyle { get; set; }
 
+    [Option("collapse-from",
+        HelpText = "Start collapsing only from this depth (1 = first level under root).", Required = false)]
+    public int? CollapseFrom { get; set; }
+
     // ============================================================================
     // New gitignore-style filtering options (recommended)
     // ============================================================================

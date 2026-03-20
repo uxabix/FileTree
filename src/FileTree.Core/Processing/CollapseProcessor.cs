@@ -15,15 +15,26 @@ internal sealed class CollapseProcessor : ITreeProcessor
             return root;
         }
 
-        return CloneWithCollapse(root, options);
+        return CloneWithCollapse(root, options, 0);
     }
 
-    private static FileNode CloneWithCollapse(FileNode node, FileTreeOptions options)
+    private static FileNode CloneWithCollapse(FileNode node, FileTreeOptions options, int depth)
     {
         var clone = CloneNode(node);
 
         if (!node.IsDirectory || node.Children.Count == 0)
         {
+            return clone;
+        }
+
+        var collapseFrom = Math.Max(0, options.CollapseFrom);
+        if (depth < collapseFrom)
+        {
+            foreach (var child in node.Children)
+            {
+                clone.AddChild(CloneWithCollapse(child, options, depth + 1));
+            }
+
             return clone;
         }
 
@@ -36,7 +47,7 @@ internal sealed class CollapseProcessor : ITreeProcessor
         {
             foreach (var child in node.Children)
             {
-                clone.AddChild(CloneWithCollapse(child, options));
+                clone.AddChild(CloneWithCollapse(child, options, depth + 1));
             }
 
             return clone;
@@ -44,7 +55,7 @@ internal sealed class CollapseProcessor : ITreeProcessor
 
         for (var i = 0; i < keepStart; i++)
         {
-            clone.AddChild(CloneWithCollapse(node.Children[i], options));
+            clone.AddChild(CloneWithCollapse(node.Children[i], options, depth + 1));
         }
 
         var middleCount = childCount - keepStart - keepEnd;
@@ -56,7 +67,7 @@ internal sealed class CollapseProcessor : ITreeProcessor
 
         for (var i = childCount - keepEnd; i < childCount; i++)
         {
-            clone.AddChild(CloneWithCollapse(node.Children[i], options));
+            clone.AddChild(CloneWithCollapse(node.Children[i], options, depth + 1));
         }
 
         return clone;
@@ -68,18 +79,43 @@ internal sealed class CollapseProcessor : ITreeProcessor
         {
             IsCollapsedPlaceholder = source.IsCollapsedPlaceholder,
             CollapsedCount = source.CollapsedCount,
+            CollapsedFileCount = source.CollapsedFileCount,
+            CollapsedFolderCount = source.CollapsedFolderCount,
             CollapsedExtensionHint = source.CollapsedExtensionHint,
         };
     }
 
     private static FileNode CreatePlaceholder(FileNode parent, IReadOnlyList<FileNode> collapsed)
     {
+        var (fileCount, folderCount) = CountCollapsedTypes(collapsed);
         return new FileNode("...", Path.Combine(parent.FullPath, "..."), false)
         {
             IsCollapsedPlaceholder = true,
             CollapsedCount = collapsed.Count,
+            CollapsedFileCount = fileCount,
+            CollapsedFolderCount = folderCount,
             CollapsedExtensionHint = GetCollapsedExtensionHint(collapsed),
         };
+    }
+
+    private static (int FileCount, int FolderCount) CountCollapsedTypes(IReadOnlyList<FileNode> collapsed)
+    {
+        var files = 0;
+        var folders = 0;
+
+        foreach (var node in collapsed)
+        {
+            if (node.IsDirectory)
+            {
+                folders++;
+            }
+            else
+            {
+                files++;
+            }
+        }
+
+        return (files, folders);
     }
 
     private static string? GetCollapsedExtensionHint(IReadOnlyList<FileNode> collapsed)

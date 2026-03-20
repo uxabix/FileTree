@@ -15,4 +15,5 @@ public class FileTreeOptions
     public int CollapseKeepStart { get; init; } = 1;
     public int CollapseKeepEnd { get; init; } = 1;
     public CollapseStyle CollapseStyle { get; init; } = CollapseStyle.Count;
+    public int CollapseFrom { get; init; } = 1;
 }

@@ -21,6 +21,8 @@ public class FileNode
     public IReadOnlyList<FileNode> Children => _children;
     public bool IsCollapsedPlaceholder { get; set; }
     public int CollapsedCount { get; set; }
+    public int CollapsedFileCount { get; set; }
+    public int CollapsedFolderCount { get; set; }
     public string? CollapsedExtensionHint { get; set; }
 
     public void AddChild(FileNode child)

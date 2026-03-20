@@ -16,6 +16,7 @@ internal sealed class ScanOptionsState
     public int? CollapseKeepStart { get; set; }
     public int? CollapseKeepEnd { get; set; }
     public CollapseStyle? CollapseStyle { get; set; }
+    public int? CollapseFrom { get; set; }
     public IEnumerable<string>? FilterRules { get; set; }
     public string? FilterFile { get; set; }
     public string? GlobalFilterFile { get; set; }
@@ -53,6 +54,7 @@ internal sealed class ScanOptionsState
             CollapseKeepStart = cli.CollapseKeepStart,
             CollapseKeepEnd = cli.CollapseKeepEnd,
             CollapseStyle = cli.CollapseStyle,
+            CollapseFrom = cli.CollapseFrom,
             FilterRules = cli.FilterRules,
             FilterFile = NormalizePath(cli.FilterFile),
             GlobalFilterFile = NormalizePath(cli.GlobalFilterFile),
@@ -106,6 +108,7 @@ internal sealed class ScanOptionsState
         if (source.CollapseKeepStart.HasValue) CollapseKeepStart = source.CollapseKeepStart;
         if (source.CollapseKeepEnd.HasValue) CollapseKeepEnd = source.CollapseKeepEnd;
         if (source.CollapseStyle.HasValue) CollapseStyle = source.CollapseStyle;
+        if (source.CollapseFrom.HasValue) CollapseFrom = source.CollapseFrom;
         if (source.FilterRules != null) FilterRules = source.FilterRules;
         if (source.FilterFile != null) FilterFile = source.FilterFile;
         if (source.GlobalFilterFile != null) GlobalFilterFile = source.GlobalFilterFile;
@@ -150,6 +153,7 @@ internal sealed class ScanOptionsState
         if (!CollapseKeepStart.HasValue && defaults.CollapseKeepStart.HasValue) CollapseKeepStart = defaults.CollapseKeepStart;
         if (!CollapseKeepEnd.HasValue && defaults.CollapseKeepEnd.HasValue) CollapseKeepEnd = defaults.CollapseKeepEnd;
         if (!CollapseStyle.HasValue && defaults.CollapseStyle.HasValue) CollapseStyle = defaults.CollapseStyle;
+        if (!CollapseFrom.HasValue && defaults.CollapseFrom.HasValue) CollapseFrom = defaults.CollapseFrom;
         if (FilterRules == null && defaults.FilterRules != null) FilterRules = defaults.FilterRules;
         if (FilterFile == null && defaults.FilterFile != null) FilterFile = defaults.FilterFile;
         if (GlobalFilterFile == null && defaults.GlobalFilterFile != null) GlobalFilterFile = defaults.GlobalFilterFile;
@@ -184,6 +188,7 @@ internal sealed class ScanOptionsState
             CollapseKeepStart = CollapseKeepStart ?? 1,
             CollapseKeepEnd = CollapseKeepEnd ?? 1,
             CollapseStyle = CollapseStyle ?? global::FileTree.Core.Models.CollapseStyle.Count,
+            CollapseFrom = CollapseFrom ?? 1,
             Filter = new FilterOptions
             {
                 RulesSource = BuildFilterRulesSource(),

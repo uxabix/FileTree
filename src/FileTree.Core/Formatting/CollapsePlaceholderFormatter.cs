@@ -18,11 +18,29 @@ internal static class CollapsePlaceholderFormatter
         }
 
         if (options.CollapseStyle == CollapseStyle.ByExtension &&
+            node.CollapsedFolderCount == 0 &&
+            node.CollapsedFileCount > 0 &&
             !string.IsNullOrWhiteSpace(node.CollapsedExtensionHint))
         {
             return $"... ({node.CollapsedCount} more {node.CollapsedExtensionHint} files)";
         }
 
-        return $"... ({node.CollapsedCount} more files)";
+        var label = GetCollapsedLabel(node);
+        return $"... ({node.CollapsedCount} more {label})";
+    }
+
+    private static string GetCollapsedLabel(FileNode node)
+    {
+        if (node.CollapsedFileCount > 0 && node.CollapsedFolderCount > 0)
+        {
+            return "files and folders";
+        }
+
+        if (node.CollapsedFolderCount > 0 && node.CollapsedFileCount == 0)
+        {
+            return "folders";
+        }
+
+        return "files";
     }
 }
