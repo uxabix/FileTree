@@ -6,6 +6,16 @@ namespace FileTree.Core.Tests.Formatting;
 
 public class AsciiTreeFormatterTests
 {
+    private static FormatContext CreateContext()
+    {
+        var options = new FileTreeOptions
+        {
+            Format = OutputFormat.Ascii
+        };
+
+        return new FormatContext(options);
+    }
+
     private static FileNode CreateTree()
     {
         var root = new FileNode("project", "project", true);
@@ -26,7 +36,7 @@ public class AsciiTreeFormatterTests
         var formatter = new AsciiTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
         var firstLine = output.Split('\n', System.StringSplitOptions.RemoveEmptyEntries)[0];
 
         Assert.Equal("project", firstLine.TrimEnd());
@@ -38,7 +48,7 @@ public class AsciiTreeFormatterTests
         var formatter = new AsciiTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
 
         Assert.Contains("|-- ", output);
         Assert.Contains("`-- ", output);
@@ -50,7 +60,7 @@ public class AsciiTreeFormatterTests
         var formatter = new AsciiTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
 
         Assert.Contains("project", output);
         Assert.Contains("src", output);
@@ -65,7 +75,7 @@ public class AsciiTreeFormatterTests
         var formatter = new AsciiTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
 
         Assert.DoesNotContain("└", output);
         Assert.DoesNotContain("├", output);
@@ -78,7 +88,7 @@ public class AsciiTreeFormatterTests
         var formatter = new AsciiTreeFormatter();
         var root = CreateTree();
 
-        var output = formatter.Format(root);
+        var output = formatter.Format(root, CreateContext());
         var lines = output.Split('\n', System.StringSplitOptions.RemoveEmptyEntries);
 
         // Проверяем, что есть строки с вложенностью

@@ -1,6 +1,5 @@
 using System.Text;
 using CommandLine;
-using FileTree.Core.Models;
 using FileTree.Core.Services;
 using FileTree.Core.Utilities;
 using FileTree.CLI.SystemIntegrator;
@@ -21,8 +20,25 @@ internal class Program
             return configExitCode;
         }
 
-        int res = Parser.Default
-            .ParseArguments<ScanCommandOptions, InstallCommandOptions, UninstallCommandOptions, UninstallDeepCommandOptions, PathsCommandOptions>(args)
+        if (IsHelpRequest(args))
+        {
+            var helpParser = new Parser(cfg => cfg.HelpWriter = Console.Out);
+            helpParser.ParseArguments<ScanCommandOptions, InstallCommandOptions, UninstallCommandOptions, UninstallDeepCommandOptions, PathsCommandOptions>(args);
+            Console.WriteLine("Press any key to exit...");
+            Console.ReadKey();
+            return 0;
+        }
+
+        var parser = new Parser(cfg =>
+        {
+            cfg.HelpWriter = null;
+            cfg.AutoHelp = false;
+        });
+
+        var normalizedArgs = NormalizeBooleanFlags(args);
+
+        int res = parser
+            .ParseArguments<ScanCommandOptions, InstallCommandOptions, UninstallCommandOptions, UninstallDeepCommandOptions, PathsCommandOptions>(normalizedArgs)
             .MapResult(
                 (ScanCommandOptions opts) => RunScan(opts),
                 (InstallCommandOptions _) => RunInstallAsync().GetAwaiter().GetResult(),
@@ -38,44 +54,21 @@ internal class Program
 
     private static int RunScan(ScanCommandOptions opts)
     {
-        ApplySettingsDefaultsIfNeeded(opts);
+        var state = ScanOptionsState.FromCli(opts);
+        ApplySettingsDefaultsIfNeeded(state);
 
-        if (opts.Wait == true)
+        if (state.Wait == true)
         {
-            return RunScanInteractive(opts);
+            return RunScanInteractive(state);
         }
 
-        return RunScanOnce(opts);
+        return RunScanOnce(state);
     }
 
-    private static int RunScanOnce(ScanCommandOptions opts)
+    private static int RunScanOnce(ScanOptionsState state)
     {
-        // Basic validation to catch common parsing mistakes
-        if (opts.Path == "true" || opts.Path == "false")
-        {
-            opts.Path = null; // Treat as if no path was provided
-        }
-        var targetPath = opts.PathOption ?? opts.Path ?? Directory.GetCurrentDirectory();
-
-        var options = new FileTreeOptions
-        {
-            MaxDepth = opts.MaxDepth ?? -1,
-            MaxWidth = opts.MaxWidth ?? -1,
-            MaxNodes = opts.MaxNodes ?? -1,
-            UseGitIgnore = opts.UseGitIgnore ?? true,
-            SkipHidden = opts.SkipHidden ?? true,
-            Format = opts.Format ?? OutputFormat.Ascii,
-            Filter = new FilterOptions
-            {
-                RulesSource = BuildFilterRulesSource(opts),
-                IncludeExtensions = opts.IncludeExtensions?.ToList() ?? new List<string>(),
-                ExcludeExtensions = opts.ExcludeExtensions?.ToList() ?? new List<string>(),
-                IncludeNames = opts.IncludeNames?.ToList() ?? new List<string>(),
-                ExcludeNames = opts.ExcludeNames?.ToList() ?? new List<string>(),
-                IgnoreEmptyFolders = opts.IgnoreEmptyFolders,
-                UseLocalFilterFiles = !opts.NoLocalFilters,
-            }
-        };
+        var targetPath = state.GetTargetPath();
+        var options = state.ToFileTreeOptions();
 
         Console.WriteLine($"Scanning directory: {targetPath}");
         Console.WriteLine($"Options: MaxDepth={options.MaxDepth}, Format={options.Format}, UseGitIgnore={options.UseGitIgnore}");
@@ -100,9 +93,9 @@ internal class Program
         }
     }
 
-    private static int RunScanInteractive(ScanCommandOptions opts)
+    private static int RunScanInteractive(ScanOptionsState state)
     {
-        var current = opts;
+        var current = state;
 
         Console.WriteLine("Interactive mode. Type additional options (e.g. -w 10 -n 200), then 'show' to print the tree or 'exit' to quit.");
         Console.WriteLine();
@@ -123,20 +116,18 @@ internal class Program
             }
 
             var trimmed = line.Trim();
-                if (string.Equals(trimmed, "show", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(trimmed, "show", StringComparison.OrdinalIgnoreCase))
+            {
+                try
                 {
-                    // In interactive mode we ignore the wait flag when running.
-                    current.Wait = false;
-                    try
-                    {
-                        return RunScanOnce(current);
-                    }
-                    catch (PathValidationException)
-                    {
-                        // Error already handled in RunScanOnce
-                        return 1;
-                    }
+                    return RunScanOnce(current);
                 }
+                catch (PathValidationException)
+                {
+                    // Error already handled in RunScanOnce
+                    return 1;
+                }
+            }
 
             if (string.Equals(trimmed, "exit", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(trimmed, "quit", StringComparison.OrdinalIgnoreCase))
@@ -158,123 +149,26 @@ internal class Program
                 continue;
             }
 
-            var parser = new Parser(cfg => cfg.HelpWriter = null);
+            args = NormalizeBooleanFlags(args);
+
+            var parser = new Parser(cfg =>
+            {
+                cfg.HelpWriter = null;
+                cfg.AutoHelp = false;
+            });
             var result = parser.ParseArguments<ScanCommandOptions>(args);
 
             result
                 .WithParsed(newOpts =>
                 {
-                    MergeScanOptions(current, newOpts);
+                    var newState = ScanOptionsState.FromCli(newOpts);
+                    current.MergeFrom(newState);
                     Console.WriteLine("Updated options.");
                 })
                 .WithNotParsed(_ =>
                 {
                     Console.WriteLine("Could not parse input. Please enter valid options or 'show'/'exit'.");
                 });
-        }
-    }
-
-    private static void MergeScanOptions(ScanCommandOptions target, ScanCommandOptions source)
-    {
-        if (!string.IsNullOrWhiteSpace(source.PathOption))
-        {
-            target.Path = source.PathOption;
-            target.PathOption = source.PathOption;
-        }
-
-        if (source.MaxDepth.HasValue)
-        {
-            target.MaxDepth = source.MaxDepth;
-        }
-
-        if (source.MaxWidth.HasValue)
-        {
-            target.MaxWidth = source.MaxWidth;
-        }
-
-        if (source.MaxNodes.HasValue)
-        {
-            target.MaxNodes = source.MaxNodes;
-        }
-
-        if (source.UseGitIgnore.HasValue)
-        {
-            target.UseGitIgnore = source.UseGitIgnore;
-        }
-
-        if (source.Format.HasValue)
-        {
-            target.Format = source.Format;
-        }
-
-        if (source.IncludeExtensions is not null)
-        {
-            target.IncludeExtensions = source.IncludeExtensions;
-        }
-
-        if (source.ExcludeExtensions is not null)
-        {
-            target.ExcludeExtensions = source.ExcludeExtensions;
-        }
-
-        if (source.IncludeNames is not null)
-        {
-            target.IncludeNames = source.IncludeNames;
-        }
-
-        if (source.ExcludeNames is not null)
-        {
-            target.ExcludeNames = source.ExcludeNames;
-        }
-
-        if (source.FilterRules is not null)
-        {
-            target.FilterRules = source.FilterRules;
-        }
-
-        if (!string.IsNullOrWhiteSpace(source.FilterFile))
-        {
-            target.FilterFile = source.FilterFile;
-        }
-
-        if (!string.IsNullOrWhiteSpace(source.GlobalFilterFile))
-        {
-            target.GlobalFilterFile = source.GlobalFilterFile;
-        }
-
-        if (source.NoDefaultFilters)
-        {
-            target.NoDefaultFilters = source.NoDefaultFilters;
-        }
-
-        if (source.NoAppGlobalIgnore)
-        {
-            target.NoAppGlobalIgnore = source.NoAppGlobalIgnore;
-        }
-
-        if (source.NoLocalFilters)
-        {
-            target.NoLocalFilters = source.NoLocalFilters;
-        }
-
-        if (source.NoDefaultSettings)
-        {
-            target.NoDefaultSettings = source.NoDefaultSettings;
-        }
-
-        if (source.IgnoreEmptyFolders)
-        {
-            target.IgnoreEmptyFolders = source.IgnoreEmptyFolders;
-        }
-
-        if (source.SkipHidden.HasValue)
-        {
-            target.SkipHidden = source.SkipHidden;
-        }
-
-        if (source.Wait)
-        {
-            target.Wait = source.Wait;
         }
     }
 
@@ -316,22 +210,106 @@ internal class Program
         return args.ToArray();
     }
 
-    private static FilterRulesSource BuildFilterRulesSource(ScanCommandOptions opts)
+    private static bool IsHelpRequest(string[] args)
     {
-        var inlineRules = opts.FilterRules?
-            .Where(rule => !string.IsNullOrWhiteSpace(rule))
-            .Select(rule => rule.Trim())
-            .ToList() ?? new List<string>();
+        return args.Any(arg =>
+            string.Equals(arg, "--help", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(arg, "-?", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(arg, "/?", StringComparison.OrdinalIgnoreCase));
+    }
 
-        return new FilterRulesSource
+    private static string[] NormalizeBooleanFlags(string[] args)
+    {
+        if (args.Length == 0)
         {
-            AppGlobalConfigPath = AppPaths.GetGlobalIgnorePath(),
-            UseAppGlobalConfig = !opts.NoAppGlobalIgnore,
-            UseDefaultGlobalConfig = !opts.NoDefaultFilters,
-            GlobalConfigPath = opts.GlobalFilterFile,
-            LocalConfigPath = opts.FilterFile,
-            InlineRules = inlineRules,
-        };
+            return args;
+        }
+
+        var normalized = new List<string>(args.Length);
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+
+            if (arg.StartsWith("--", StringComparison.Ordinal))
+            {
+                var eqIndex = arg.IndexOf('=');
+                var name = eqIndex > 2 ? arg.Substring(2, eqIndex - 2) : arg.Substring(2);
+
+                if (IsBooleanLongOption(name))
+                {
+                    if (eqIndex >= 0)
+                    {
+                        normalized.Add(arg);
+                        continue;
+                    }
+
+                    if (i + 1 < args.Length && IsBooleanLiteral(args[i + 1]))
+                    {
+                        normalized.Add($"{arg}={args[i + 1]}");
+                        i++;
+                        continue;
+                    }
+
+                    normalized.Add($"{arg}=true");
+                    continue;
+                }
+            }
+
+            if (IsShortBooleanOption(arg))
+            {
+                if (i + 1 < args.Length && IsBooleanLiteral(args[i + 1]))
+                {
+                    normalized.Add(arg);
+                    normalized.Add(args[i + 1]);
+                    i++;
+                    continue;
+                }
+
+                normalized.Add(arg);
+                normalized.Add("true");
+                continue;
+            }
+
+            normalized.Add(arg);
+        }
+
+        return normalized.ToArray();
+    }
+
+    private static bool IsBooleanLongOption(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return false;
+        }
+
+        return name.Equals("use-gitignore", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("no-default-filters", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("no-app-global-ignore", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("no-local-filters", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("no-default-settings", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("ignore-empty", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("hidden", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("highlight-hidden", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("wait", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsShortBooleanOption(string arg)
+    {
+        if (arg.Length != 2 || arg[0] != '-')
+        {
+            return false;
+        }
+
+        var option = arg[1];
+        return option == 'g' || option == 'h' || option == '!';
+    }
+
+    private static bool IsBooleanLiteral(string value)
+    {
+        return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "false", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void EnsureGlobalIgnoreFileOnStartup(string[] args)
@@ -528,9 +506,9 @@ internal class Program
         Console.WriteLine("  FileTree config settings reset  Reset settings file to defaults");
     }
 
-    private static void ApplySettingsDefaultsIfNeeded(ScanCommandOptions opts)
+    private static void ApplySettingsDefaultsIfNeeded(ScanOptionsState state)
     {
-        if (opts.NoDefaultSettings)
+        if (state.NoDefaultSettings == true)
         {
             return;
         }
@@ -541,10 +519,10 @@ internal class Program
             return;
         }
 
-        ApplySettingsDefaults(opts, defaults);
+        state.ApplyDefaults(defaults);
     }
 
-    private static ScanCommandOptions? LoadSettingsDefaults()
+    private static ScanOptionsState? LoadSettingsDefaults()
     {
         var path = AppPaths.GetGlobalSettingsPath();
         if (!File.Exists(path))
@@ -576,12 +554,18 @@ internal class Program
                 return null;
             }
 
+            args = NormalizeBooleanFlags(args.ToArray()).ToList();
+
             if (string.Equals(args[0], "scan", StringComparison.OrdinalIgnoreCase))
             {
                 args.RemoveAt(0);
             }
 
-            var parser = new Parser(cfg => cfg.HelpWriter = null);
+            var parser = new Parser(cfg =>
+            {
+                cfg.HelpWriter = null;
+                cfg.AutoHelp = false;
+            });
             ScanCommandOptions? settings = null;
             var result = parser.ParseArguments<ScanCommandOptions>(args);
 
@@ -589,118 +573,12 @@ internal class Program
                 .WithParsed(parsed => settings = parsed)
                 .WithNotParsed(_ => settings = null);
 
-            return settings;
+            return settings == null ? null : ScanOptionsState.FromCli(settings);
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Warning: Could not read settings file '{path}': {ex.Message}");
             return null;
-        }
-    }
-
-    private static void ApplySettingsDefaults(ScanCommandOptions target, ScanCommandOptions defaults)
-    {
-        if (string.IsNullOrWhiteSpace(target.PathOption) && string.IsNullOrWhiteSpace(target.Path))
-        {
-            if (!string.IsNullOrWhiteSpace(defaults.PathOption))
-            {
-                target.PathOption = defaults.PathOption;
-                target.Path = defaults.PathOption;
-            }
-            else if (!string.IsNullOrWhiteSpace(defaults.Path))
-            {
-                target.Path = defaults.Path;
-            }
-        }
-
-        if (!target.MaxDepth.HasValue && defaults.MaxDepth.HasValue)
-        {
-            target.MaxDepth = defaults.MaxDepth;
-        }
-
-        if (!target.MaxWidth.HasValue && defaults.MaxWidth.HasValue)
-        {
-            target.MaxWidth = defaults.MaxWidth;
-        }
-
-        if (!target.MaxNodes.HasValue && defaults.MaxNodes.HasValue)
-        {
-            target.MaxNodes = defaults.MaxNodes;
-        }
-
-        if (!target.UseGitIgnore.HasValue && defaults.UseGitIgnore.HasValue)
-        {
-            target.UseGitIgnore = defaults.UseGitIgnore;
-        }
-
-        if (!target.Format.HasValue && defaults.Format.HasValue)
-        {
-            target.Format = defaults.Format;
-        }
-
-        if (target.FilterRules is null && defaults.FilterRules is not null)
-        {
-            target.FilterRules = defaults.FilterRules;
-        }
-
-        if (string.IsNullOrWhiteSpace(target.FilterFile) && !string.IsNullOrWhiteSpace(defaults.FilterFile))
-        {
-            target.FilterFile = defaults.FilterFile;
-        }
-
-        if (string.IsNullOrWhiteSpace(target.GlobalFilterFile) && !string.IsNullOrWhiteSpace(defaults.GlobalFilterFile))
-        {
-            target.GlobalFilterFile = defaults.GlobalFilterFile;
-        }
-
-        if (!target.NoDefaultFilters && defaults.NoDefaultFilters)
-        {
-            target.NoDefaultFilters = true;
-        }
-
-        if (!target.NoAppGlobalIgnore && defaults.NoAppGlobalIgnore)
-        {
-            target.NoAppGlobalIgnore = true;
-        }
-
-        if (!target.NoLocalFilters && defaults.NoLocalFilters)
-        {
-            target.NoLocalFilters = true;
-        }
-
-        if (!target.IgnoreEmptyFolders && defaults.IgnoreEmptyFolders)
-        {
-            target.IgnoreEmptyFolders = true;
-        }
-
-        if (!target.SkipHidden.HasValue && defaults.SkipHidden.HasValue)
-        {
-            target.SkipHidden = defaults.SkipHidden;
-        }
-
-        if (target.IncludeExtensions is null && defaults.IncludeExtensions is not null)
-        {
-            target.IncludeExtensions = defaults.IncludeExtensions;
-        }
-
-        if (target.ExcludeExtensions is null && defaults.ExcludeExtensions is not null)
-        {
-            target.ExcludeExtensions = defaults.ExcludeExtensions;
-        }
-
-        if (target.IncludeNames is null && defaults.IncludeNames is not null)
-        {
-            target.IncludeNames = defaults.IncludeNames;
-        }
-
-        if (target.ExcludeNames is null && defaults.ExcludeNames is not null)
-        {
-            target.ExcludeNames = defaults.ExcludeNames;
-        }
-
-        if (!target.Wait && defaults.Wait)
-        {
-            target.Wait = true;
         }
     }
 

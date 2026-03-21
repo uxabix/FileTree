@@ -21,61 +21,109 @@ public class ScanCommandOptions
     [Option('n', "max-nodes", HelpText = "Maximum total number of nodes in the tree.", Required = false)]
     public int? MaxNodes { get; set; }
 
-    [Option('g', "use-gitignore", HelpText = "Use .gitignore rules to filter files.", Required = false)]
+    [Option('g', "use-gitignore", HelpText = "Use .gitignore rules to filter files (true|false).", Required = false)]
     public bool? UseGitIgnore { get; set; }
 
     [Option('f', "format", HelpText = "Output format (Ascii, Markdown, Unicode).", Required = false)]
     public OutputFormat? Format { get; set; }
 
+    [Option("collapse-threshold",
+        HelpText = "Collapse directories when item count exceeds this value.", Required = false)]
+    public int? CollapseThreshold { get; set; }
+
+    [Option("collapse-keep-start",
+        HelpText = "Number of items to keep at the start when collapsing.", Required = false)]
+    public int? CollapseKeepStart { get; set; }
+
+    [Option("collapse-keep-end",
+        HelpText = "Number of items to keep at the end when collapsing.", Required = false)]
+    public int? CollapseKeepEnd { get; set; }
+
+    [Option("collapse-style",
+        HelpText = "Collapse placeholder style (Simple, Count, ByExtension).", Required = false)]
+    public CollapseStyle? CollapseStyle { get; set; }
+
+    [Option("collapse-from",
+        HelpText = "Start collapsing only from this depth (1 = first level under root).", Required = false)]
+    public int? CollapseFrom { get; set; }
+
     // ============================================================================
     // New gitignore-style filtering options (recommended)
     // ============================================================================
 
-    [Option("filter-rules", HelpText = "Filter rules in gitignore format (comma-separated). Example: '*.log,bin/,!important.txt'", Required = false, Separator = ',')]
+    [Option("filter-rules",
+        HelpText = "Filter rules in gitignore format (comma-separated). Example: '*.log,bin/,!important.txt'",
+        Required = false, Separator = ',')]
     public IEnumerable<string>? FilterRules { get; set; }
 
-    [Option("filter-file", HelpText = "Path to local filter configuration file with gitignore-style rules.", Required = false)]
+    [Option("filter-file", HelpText = "Path to local filter configuration file with gitignore-style rules.",
+        Required = false)]
     public string? FilterFile { get; set; }
 
-    [Option("global-filter-file", HelpText = "Path to global filter configuration file with gitignore-style rules.", Required = false)]
+    [Option("global-filter-file", HelpText = "Path to global filter configuration file with gitignore-style rules.",
+        Required = false)]
     public string? GlobalFilterFile { get; set; }
 
-    [Option("no-default-filters", HelpText = "Don't load default global filter configuration from ~/.filetreeignore", Required = false)]
-    public bool NoDefaultFilters { get; set; }
+    [Option("no-default-filters",
+        HelpText = "Don't load default global filter configuration from ~/.filetreeignore (true|false).",
+        Required = false)]
+    public bool? NoDefaultFilters { get; set; }
 
-    [Option('!', "no-app-global-ignore", HelpText = "Don't load app-level global filter file (FileTree.ignore near the executable).", Required = false)]
-    public bool NoAppGlobalIgnore { get; set; }
+    [Option('!', "no-app-global-ignore",
+        HelpText = "Don't load app-level global filter file (FileTree.ignore near the executable) (true|false).",
+        Required = false)]
+    public bool? NoAppGlobalIgnore { get; set; }
 
-    [Option("no-local-filters", HelpText = "Don't load local .filetreeignore files from the directory tree.", Required = false)]
-    public bool NoLocalFilters { get; set; }
+    [Option("no-local-filters",
+        HelpText = "Don't load local .filetreeignore files from the directory tree (true|false).", Required = false)]
+    public bool? NoLocalFilters { get; set; }
 
-    [Option("no-default-settings", HelpText = "Don't load default settings from FileTree.Settings.", Required = false)]
-    public bool NoDefaultSettings { get; set; }
+    [Option("no-default-settings", HelpText = "Don't load default settings from FileTree.Settings (true|false).",
+        Required = false)]
+    public bool? NoDefaultSettings { get; set; }
 
     // ============================================================================
     // Legacy filtering options (deprecated but maintained for backward compatibility)
     // ============================================================================
 
-    [Option('i', "include-ext", HelpText = "[DEPRECATED] Include only these extensions (comma-separated). Use --filter-rules instead.", Required = false, Separator = ',')]
+    [Option('i', "include-ext",
+        HelpText = "[DEPRECATED] Include only these extensions (comma-separated). Use --filter-rules instead.",
+        Required = false, Separator = ',')]
     public IEnumerable<string>? IncludeExtensions { get; set; }
 
-    [Option('e', "exclude-ext", HelpText = "[DEPRECATED] Exclude these extensions (comma-separated). Use --filter-rules instead.", Required = false, Separator = ',')]
+    [Option('e', "exclude-ext",
+        HelpText = "[DEPRECATED] Exclude these extensions (comma-separated). Use --filter-rules instead.",
+        Required = false, Separator = ',')]
     public IEnumerable<string>? ExcludeExtensions { get; set; }
 
-    [Option("include-names", HelpText = "[DEPRECATED] Include files with these names (comma-separated). Use --filter-rules instead.", Required = false, Separator = ',')]
+    [Option("include-names",
+        HelpText = "[DEPRECATED] Include files with these names (comma-separated). Use --filter-rules instead.",
+        Required = false, Separator = ',')]
     public IEnumerable<string>? IncludeNames { get; set; }
 
-    [Option("exclude-names", HelpText = "[DEPRECATED] Exclude files with these names (comma-separated). Use --filter-rules instead.", Required = false, Separator = ',')]
+    [Option("exclude-names",
+        HelpText = "[DEPRECATED] Exclude files with these names (comma-separated). Use --filter-rules instead.",
+        Required = false, Separator = ',')]
     public IEnumerable<string>? ExcludeNames { get; set; }
 
-    [Option("ignore-empty", HelpText = "Skip empty folders.", Required = false)]
-    public bool IgnoreEmptyFolders { get; set; }
+    [Option("ignore-empty", HelpText = "Skip empty folders (true|false).", Required = false)]
+    public bool? IgnoreEmptyFolders { get; set; }
 
-    [Option('h', "hidden", HelpText = "Exclude hidden files and folders.", Required = false)]
+    [Option('h', "hidden", HelpText = "Exclude hidden files and folders (true|false).", Required = false)]
     public bool? SkipHidden { get; set; }
 
-    [Option("wait", HelpText = "Do not run immediately; enter interactive mode, accept more options, and run on 'show'.", Required = false)]
-    public bool Wait { get; set; }
+    [Option("highlight-hidden", HelpText = "Highlight hidden files and folders in output (true|false).",
+        Required = false)]
+    public bool? HighlightHiddenFiles { get; set; }
+
+    [Option("hidden-style", HelpText = "Hidden file style (Prefix, Suffix, Minimal).", Required = false)]
+    public HiddenStyle? HiddenStyle { get; set; }
+
+    [Option("wait",
+        HelpText =
+            "Do not run immediately; enter interactive mode, accept more options, and run on 'show' (true|false).",
+        Required = false)]
+    public bool? Wait { get; set; }
 }
 
 [Verb("install", HelpText = "Install FileTree into the system (PATH, context menu, etc.).")]
@@ -88,7 +136,8 @@ public class UninstallCommandOptions
 {
 }
 
-[Verb("uninstall-deep", HelpText = "Deep uninstall FileTree (search and remove all FileTree entries for the current user).")]
+[Verb("uninstall-deep",
+    HelpText = "Deep uninstall FileTree (search and remove all FileTree entries for the current user).")]
 public class UninstallDeepCommandOptions
 {
 }

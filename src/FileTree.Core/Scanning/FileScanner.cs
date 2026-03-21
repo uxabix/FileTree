@@ -58,7 +58,7 @@ namespace FileTree.Core.Scanning
             _ignoreEmptyFolders = options.Filter.IgnoreEmptyFolders;
 
             var rootInfo = new DirectoryInfo(fullRootPath);
-            var rootNode = new FileNode(rootInfo.Name, rootInfo.FullName, true);
+            var rootNode = new FileNode(rootInfo.Name, rootInfo.FullName, true, HiddenFileDetector.IsHidden(rootInfo));
 
             var rootPushed = _inclusionEvaluator.EnterDirectory(rootInfo);
             PerformScan(rootInfo, rootNode, 0, options);
@@ -102,7 +102,7 @@ namespace FileTree.Core.Scanning
 
                 bool isDir = item is DirectoryInfo;
 
-                var node = new FileNode(item.Name, item.FullName, isDir);
+                var node = new FileNode(item.Name, item.FullName, isDir, HiddenFileDetector.IsHidden(item));
 
                 parentNode.AddChild(node);
                 _nodeCount++;
