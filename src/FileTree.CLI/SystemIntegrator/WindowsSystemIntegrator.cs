@@ -358,16 +358,16 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
     private static void AddContextMenu(string exePath)
     {
         // Call with default options
-        AddContextMenuForKey(DirectoryMenuKey, exePath, "\"%1\"");
-        AddContextMenuForKey(FileMenuKey, exePath, "\"%1\"");
-        AddContextMenuForKey(DesktopMenuKey, exePath, "");
-        AddContextMenuForKey(DirectoryBackgroundMenuKey, exePath, "");
+        AddContextMenuForKey(DirectoryMenuKey, exePath, "\"%1\" --pause-exit");
+        AddContextMenuForKey(FileMenuKey, exePath, "\"%1\" --pause-exit");
+        AddContextMenuForKey(DesktopMenuKey, exePath, "--pause-exit");
+        AddContextMenuForKey(DirectoryBackgroundMenuKey, exePath, "--pause-exit");
         
         // Customizable call
-        AddContextMenuForKey(DirectoryMenuKeyCustom, exePath, "\"%1\" --wait", "FileTree Customizable");
-        AddContextMenuForKey(FileMenuKeyCustom, exePath, "\"%1\" --wait", "FileTree Customizable");
-        AddContextMenuForKey(DesktopMenuKeyCustom, exePath, "--wait", "FileTree Customizable");
-        AddContextMenuForKey(DirectoryBackgroundMenuKeyCustom, exePath, "--wait", "FileTree Customizable");
+        AddContextMenuForKey(DirectoryMenuKeyCustom, exePath, "\"%1\" --wait --pause-exit", "FileTree Customizable");
+        AddContextMenuForKey(FileMenuKeyCustom, exePath, "\"%1\" --wait --pause-exit", "FileTree Customizable");
+        AddContextMenuForKey(DesktopMenuKeyCustom, exePath, "--wait --pause-exit", "FileTree Customizable");
+        AddContextMenuForKey(DirectoryBackgroundMenuKeyCustom, exePath, "--wait --pause-exit", "FileTree Customizable");
     }
     
     private static void AddContextMenuForKey(

@@ -130,6 +130,12 @@ public class ScanCommandOptions
 
     [Option('s', "silent", HelpText = "Do not print output to console")]
     public bool Silent { get; set; }
+
+    [Option("show-options", HelpText = "Print core scan options before output")]
+    public bool ShowOptions { get; set; }
+
+    [Option("show-options-all", HelpText = "Print all scan options before output")]
+    public bool ShowOptionsAll { get; set; }
 }
 
 [Verb("install", HelpText = "Install FileTree into the system (PATH, context menu, etc.).")]

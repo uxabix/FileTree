@@ -35,6 +35,8 @@ internal sealed class ScanOptionsState
     public bool? Wait { get; set; }
     public bool? Copy { get; set; }
     public bool? Silent { get; set; }
+    public bool? ShowOptions { get; set; }
+    public bool? ShowOptionsAll { get; set; }
 
     public static ScanOptionsState FromCli(ScanCommandOptions cli)
     {
@@ -75,6 +77,8 @@ internal sealed class ScanOptionsState
             Wait = cli.Wait,
             Copy = cli.Copy,
             Silent = cli.Silent,
+            ShowOptions = cli.ShowOptions,
+            ShowOptionsAll = cli.ShowOptionsAll,
         };
 
         if (!string.IsNullOrWhiteSpace(state.PathOption))
@@ -131,6 +135,8 @@ internal sealed class ScanOptionsState
         if (source.Wait.HasValue) Wait = source.Wait;
         if (source.Copy.HasValue) Copy = source.Copy;
         if (source.Silent.HasValue) Silent = source.Silent;
+        if (source.ShowOptions.HasValue) ShowOptions = source.ShowOptions;
+        if (source.ShowOptionsAll.HasValue) ShowOptionsAll = source.ShowOptionsAll;
     }
 
     public void ApplyDefaults(ScanOptionsState defaults)
@@ -178,6 +184,8 @@ internal sealed class ScanOptionsState
         if (!Wait.HasValue && defaults.Wait.HasValue) Wait = defaults.Wait;
         if (!Copy.HasValue && defaults.Copy.HasValue) Copy = defaults.Copy;
         if (!Silent.HasValue && defaults.Silent.HasValue) Silent = defaults.Silent;
+        if (!ShowOptions.HasValue && defaults.ShowOptions.HasValue) ShowOptions = defaults.ShowOptions;
+        if (!ShowOptionsAll.HasValue && defaults.ShowOptionsAll.HasValue) ShowOptionsAll = defaults.ShowOptionsAll;
     }
 
     public FileTreeOptions ToFileTreeOptions()
