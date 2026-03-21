@@ -33,6 +33,8 @@ internal sealed class ScanOptionsState
     public bool? HighlightHiddenFiles { get; set; }
     public HiddenStyle? HiddenStyle { get; set; }
     public bool? Wait { get; set; }
+    public bool? Copy { get; set; }
+    public bool? Silent { get; set; }
 
     public static ScanOptionsState FromCli(ScanCommandOptions cli)
     {
@@ -71,6 +73,8 @@ internal sealed class ScanOptionsState
             HighlightHiddenFiles = cli.HighlightHiddenFiles,
             HiddenStyle = cli.HiddenStyle,
             Wait = cli.Wait,
+            Copy = cli.Copy,
+            Silent = cli.Silent,
         };
 
         if (!string.IsNullOrWhiteSpace(state.PathOption))
@@ -125,6 +129,8 @@ internal sealed class ScanOptionsState
         if (source.HighlightHiddenFiles.HasValue) HighlightHiddenFiles = source.HighlightHiddenFiles;
         if (source.HiddenStyle.HasValue) HiddenStyle = source.HiddenStyle;
         if (source.Wait.HasValue) Wait = source.Wait;
+        if (source.Copy.HasValue) Copy = source.Copy;
+        if (source.Silent.HasValue) Silent = source.Silent;
     }
 
     public void ApplyDefaults(ScanOptionsState defaults)
@@ -170,6 +176,8 @@ internal sealed class ScanOptionsState
         if (!HighlightHiddenFiles.HasValue && defaults.HighlightHiddenFiles.HasValue) HighlightHiddenFiles = defaults.HighlightHiddenFiles;
         if (!HiddenStyle.HasValue && defaults.HiddenStyle.HasValue) HiddenStyle = defaults.HiddenStyle;
         if (!Wait.HasValue && defaults.Wait.HasValue) Wait = defaults.Wait;
+        if (!Copy.HasValue && defaults.Copy.HasValue) Copy = defaults.Copy;
+        if (!Silent.HasValue && defaults.Silent.HasValue) Silent = defaults.Silent;
     }
 
     public FileTreeOptions ToFileTreeOptions()

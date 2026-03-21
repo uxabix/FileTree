@@ -3,6 +3,7 @@ using CommandLine;
 using FileTree.Core.Services;
 using FileTree.Core.Utilities;
 using FileTree.CLI.SystemIntegrator;
+using TextCopy;
 
 namespace FileTree.CLI;
 
@@ -69,14 +70,29 @@ internal class Program
     {
         var targetPath = state.GetTargetPath();
         var options = state.ToFileTreeOptions();
+        var shouldCopy = state.Copy == true;
+        var shouldPrint = state.Silent != true;
 
-        Console.WriteLine($"Scanning directory: {targetPath}");
-        Console.WriteLine($"Options: MaxDepth={options.MaxDepth}, Format={options.Format}, UseGitIgnore={options.UseGitIgnore}");
+        if (shouldPrint)
+        {
+            Console.WriteLine($"Scanning directory: {targetPath}");
+            Console.WriteLine($"Options: MaxDepth={options.MaxDepth}, Format={options.Format}, UseGitIgnore={options.UseGitIgnore}");
+        }
 
         var service = new FileTreeService();
         try
         {
-            Console.WriteLine(service.Generate(targetPath, options));
+            var output = service.Generate(targetPath, options);
+            if (shouldPrint)
+            {
+                Console.WriteLine(output);
+            }
+
+            if (shouldCopy)
+            {
+                TryCopyToClipboard(output, shouldPrint);
+            }
+
             return 0;
         }
         catch (PathValidationException ex)
@@ -292,7 +308,9 @@ internal class Program
                name.Equals("ignore-empty", StringComparison.OrdinalIgnoreCase) ||
                name.Equals("hidden", StringComparison.OrdinalIgnoreCase) ||
                name.Equals("highlight-hidden", StringComparison.OrdinalIgnoreCase) ||
-               name.Equals("wait", StringComparison.OrdinalIgnoreCase);
+               name.Equals("wait", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("copy", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("silent", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsShortBooleanOption(string arg)
@@ -303,13 +321,29 @@ internal class Program
         }
 
         var option = arg[1];
-        return option == 'g' || option == 'h' || option == '!';
+        return option == 'g' || option == 'h' || option == '!' || option == 'c' || option == 's';
     }
 
     private static bool IsBooleanLiteral(string value)
     {
         return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, "false", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void TryCopyToClipboard(string output, bool shouldPrint)
+    {
+        try
+        {
+            ClipboardService.SetText(output ?? string.Empty);
+            if (shouldPrint)
+            {
+                Console.WriteLine("[Copied to clipboard]");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Warning: Could not copy output to clipboard: {ex.Message}");
+        }
     }
 
     private static void EnsureGlobalIgnoreFileOnStartup(string[] args)

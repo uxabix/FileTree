@@ -124,6 +124,12 @@ public class ScanCommandOptions
             "Do not run immediately; enter interactive mode, accept more options, and run on 'show' (true|false).",
         Required = false)]
     public bool? Wait { get; set; }
+
+    [Option('c', "copy", HelpText = "Copy output to clipboard")]
+    public bool Copy { get; set; }
+
+    [Option('s', "silent", HelpText = "Do not print output to console")]
+    public bool Silent { get; set; }
 }
 
 [Verb("install", HelpText = "Install FileTree into the system (PATH, context menu, etc.).")]
