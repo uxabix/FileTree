@@ -10,6 +10,11 @@ namespace FileTree.Core.Filtering;
 /// Loads filtering rules from multiple sources and combines them into a single ordered list.
 /// Rules are applied in order of precedence: App global -> Default global -> Custom global -> Local config -> Inline rules.
 /// </summary>
+/// <summary>
+/// Loads filter rules from various sources (app/global/local configs, inline) in precedence order.
+/// Parses .filetreeignore files, combines into ordered list for gitignore matching.
+/// Cross-platform home dir detection.
+/// </summary>
 internal class FilterRulesLoader
 {
     private const string DefaultGlobalConfigFileName = ".filetreeignore";
@@ -19,6 +24,7 @@ internal class FilterRulesLoader
     /// </summary>
     /// <param name="source">Configuration specifying which rule sources to load.</param>
     /// <returns>A list of combined rules in the correct order.</returns>
+    /// <summary>Loads rules from all sources in order, adding to list.</summary>
     public List<string> LoadFilterRules(FilterRulesSource source)
     {
         if (source == null)

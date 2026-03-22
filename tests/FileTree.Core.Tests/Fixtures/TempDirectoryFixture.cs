@@ -3,6 +3,10 @@ using System.IO;
 
 namespace FileTree.Core.Tests.Fixtures
 {
+    /// <summary>
+    /// IDisposable fixture for creating temporary directories/files for integration tests.
+    /// Cleans up on Dispose.
+/// </summary>
     public class TempDirectoryFixture : IDisposable
     {
         public string RootPath { get; }

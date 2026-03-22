@@ -2,8 +2,17 @@ using FileTree.Core.Models;
 
 namespace FileTree.Core.Formatting;
 
+/// <summary>
+/// Utility for styling node names: applies hidden file markers (prefix/suffix/minimal) based on options.
+/// Used by all tree formatters.
+/// </summary>
 internal static class NodeNameStyler
 {
+    /// <summary>Applies hidden styling if enabled and node is hidden.</summary>
+    /// <param name="name">Base name.</param>
+    /// <param name="node">Node metadata.</param>
+    /// <param name="context">Context for style.</param>
+    /// <returns>Styled name.</returns>
     internal static string Apply(string name, FileNode node, FormatContext context)
     {
         if (string.IsNullOrEmpty(name))
@@ -19,6 +28,7 @@ internal static class NodeNameStyler
         return ApplyHiddenStyle(name, context);
     }
 
+    /// <summary>Applies the configured hidden style to name.</summary>
     private static string ApplyHiddenStyle(string name, FormatContext context)
     {
         return context.Options.HiddenStyle switch

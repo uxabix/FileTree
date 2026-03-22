@@ -3,6 +3,10 @@ using FileTree.Core.Models;
 
 namespace FileTree.CLI;
 
+/// <summary>
+/// Mirrors <see cref="ScanCommandOptions"/> + conversion/merge/defaults to <see cref="FileTreeOptions"/>.
+/// Handles path prioritization, legacy/modern filter mapping.
+/// </summary>
 internal sealed class ScanOptionsState
 {
     public string? Path { get; set; }
@@ -38,6 +42,10 @@ internal sealed class ScanOptionsState
     public bool? ShowOptions { get; set; }
     public bool? ShowOptionsAll { get; set; }
 
+    /// <summary>Creates state from parsed CLI options, normalizes paths.</summary>
+    /// <param name="cli">Raw CLI options.</param>
+    /// <returns>New state instance.</returns>
+    /// <exception cref="ArgumentNullException">cli null.</exception>
     public static ScanOptionsState FromCli(ScanCommandOptions cli)
     {
         if (cli == null)
@@ -89,6 +97,8 @@ internal sealed class ScanOptionsState
         return state;
     }
 
+    /// <summary>Merges non-null values from source (path prio: PathOption > Path, overrides hasValue).</summary>
+    /// <param name="source">Options to merge in.</param>
     public void MergeFrom(ScanOptionsState source)
     {
         if (source == null)
@@ -139,6 +149,8 @@ internal sealed class ScanOptionsState
         if (source.ShowOptionsAll.HasValue) ShowOptionsAll = source.ShowOptionsAll;
     }
 
+    /// <summary>Applies defaults only to null/unset fields (path prio: PathOption > Path).</summary>
+    /// <param name="defaults">Defaults to apply.</param>
     public void ApplyDefaults(ScanOptionsState defaults)
     {
         if (defaults == null)
@@ -188,6 +200,8 @@ internal sealed class ScanOptionsState
         if (!ShowOptionsAll.HasValue && defaults.ShowOptionsAll.HasValue) ShowOptionsAll = defaults.ShowOptionsAll;
     }
 
+    /// <summary>Converts to core <see cref="FileTreeOptions"/>, applies defaults (-1 unlimited, etc.), builds RulesSource.</summary>
+    /// <returns>Ready core options.</returns>
     public FileTreeOptions ToFileTreeOptions()
     {
         return new FileTreeOptions

@@ -7,11 +7,22 @@ using TextCopy;
 
 namespace FileTree.CLI;
 
+/// <summary>
+/// Main entry point for FileTree CLI application.
+/// Handles argument parsing, global options (--pause-exit), config commands (config rules/settings), scan/install/uninstall.
+/// Uses CommandLineParser, supports interactive mode, settings from FileTree.settings.txt, platform install via SystemIntegrator.
+/// </summary>
 internal class Program
 {
     private const string PauseExitLongOption = "pause-exit";
     private const char PauseExitShortOption = 'k';
 
+    /// <summary>
+    /// Entry point. Processes args, handles globals/config/help, dispatches to scan/install/uninstall/paths.
+    /// Applies settings, normalizes booleans, pauses if --pause-exit/&apos;-k&apos;.
+    /// </summary>
+    /// <param name="args">CLI arguments.</param>
+    /// <returns>0 success, 1 error/parse fail.</returns>
     private static int Main(string[] args)
     {
         var argsList = args.ToList();
@@ -57,6 +68,9 @@ internal class Program
         return res;
     }
 
+    /// <summary>Orchestrates scan: CLI to state, apply defaults, dispatch interactive/once.</summary>
+    /// <param name="opts">Parsed scan options.</param>
+    /// <returns>0 success, 1 error.</returns>
     private static int RunScan(ScanCommandOptions opts)
     {
         var state = ScanOptionsState.FromCli(opts);
@@ -70,6 +84,9 @@ internal class Program
         return RunScanOnce(state);
     }
 
+    /// <summary>Executes single tree scan/print/copy. Handles validation/output/errors.</summary>
+    /// <param name="state">Resolved scan state/options.</param>
+    /// <returns>0 success, 1 validation error.</returns>
     private static int RunScanOnce(ScanOptionsState state)
     {
         var targetPath = state.GetTargetPath();
@@ -120,6 +137,9 @@ internal class Program
         }
     }
 
+    /// <summary>Interactive shell for scan options. Parses input until &apos;show&apos;/&apos;exit&apos;.</summary>
+    /// <param name="state">Initial scan state, merged with interactive inputs.</param>
+    /// <returns>0 success/exit, 1 error.</returns>
     private static int RunScanInteractive(ScanOptionsState state)
     {
         var current = state;
@@ -474,6 +494,10 @@ internal class Program
         return 0;
     }
 
+    /// <summary>Handles &apos;config rules/settings&apos; subcommands (open/reset/path).</summary>
+    /// <param name="args">Remaining args after &apos;config&apos;.</param>
+    /// <param name="exitCode">Output: 0 success, 1 invalid.</param>
+    /// <returns>true if handled, false otherwise.</returns>
     private static bool TryHandleConfigCommand(string[] args, out int exitCode)
     {
         exitCode = 0;
@@ -636,6 +660,8 @@ internal class Program
         state.ApplyDefaults(defaults);
     }
 
+    /// <summary>Loads defaults from FileTree.settings.txt, parses as CLI args, converts to state.</summary>
+    /// <returns>Parsed state or null if missing/unparseable.</returns>
     private static ScanOptionsState? LoadSettingsDefaults()
     {
         var path = AppPaths.GetGlobalSettingsPath();
@@ -696,6 +722,8 @@ internal class Program
         }
     }
 
+    /// <summary>Delegates to platform integrator for install.</summary>
+    /// <returns>0 success.</returns>
     private static async Task<int> RunInstallAsync()
     {
         var integrator = SystemIntegratorFactory.Create();
@@ -703,6 +731,8 @@ internal class Program
         return 0;
     }
 
+    /// <summary>Delegates to platform integrator for user uninstall.</summary>
+    /// <returns>0 success.</returns>
     private static async Task<int> RunUninstallAsync()
     {
         var integrator = SystemIntegratorFactory.Create();
@@ -710,6 +740,8 @@ internal class Program
         return 0;
     }
 
+    /// <summary>Delegates to platform integrator for deep uninstall.</summary>
+    /// <returns>0 success.</returns>
     private static async Task<int> RunUninstallDeepAsync()
     {
         var integrator = SystemIntegratorFactory.Create();

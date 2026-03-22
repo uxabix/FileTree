@@ -3,8 +3,14 @@ using FileTree.Core.Models;
 
 namespace FileTree.Core.Processing;
 
+/// <summary>
+/// Default <see cref="ITreeProcessor"/> implementing tree collapse logic.
+/// Recursively clones tree, replacing large dirs with placeholders.
+/// Supports KeepStart/KeepEnd, from depth, different styles.
+/// </summary>
 internal sealed class CollapseProcessor : ITreeProcessor
 {
+    /// <summary>Processes tree if threshold set, using recursive clone/collapse.</summary>
     public FileNode Process(FileNode root, FileTreeOptions options)
     {
         if (root == null) throw new ArgumentNullException(nameof(root));

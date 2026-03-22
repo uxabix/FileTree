@@ -7,6 +7,10 @@ using FileTree.Core.Models;
 
 namespace FileTree.Tests.Scanning
 {
+    /// <summary>
+    /// Tests for FileScanner.Scan: basic scan, limits, hidden, gitignore.
+    /// Uses TempDirectoryFixture implicitly via manual temp dir.
+    /// </summary>
     public class FileScannerTests : IDisposable
     {
         private readonly string _tempRoot;
@@ -28,6 +32,7 @@ namespace FileTree.Tests.Scanning
             }
         }
 
+        /// <summary>Default options builder with overrides for test variations.</summary>
         private FileTreeOptions Options(FileTreeOptions overrides = null)
         {
             var baseOptions = new FileTreeOptions

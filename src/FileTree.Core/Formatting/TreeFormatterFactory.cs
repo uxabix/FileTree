@@ -2,8 +2,16 @@
 
 namespace FileTree.Core.Formatting;
 
+/// <summary>
+/// Factory for selecting concrete <see cref="ITreeFormatter"/> implementations based on <see cref="OutputFormat"/>.
+/// Simple switch, extensible for new formats.
+/// </summary>
 internal class TreeFormatterFactory
 {
+    /// <summary>Creates formatter for the given format.</summary>
+    /// <param name="format">Desired output format.</param>
+    /// <returns>Appropriate formatter instance.</returns>
+    /// <exception cref="NotSupportedException">Unknown format.</exception>
     public ITreeFormatter Create(OutputFormat format)
     {
         return format switch

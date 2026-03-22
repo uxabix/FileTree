@@ -3,8 +3,13 @@ using FileTree.CLI;
 
 namespace FileTree.CLI.SystemIntegrator;
 
+/// <summary>
+/// Linux integrator: prints manual PATH/~.local/bin instructions, handles configs.
+/// No auto-modification (user perms).
+/// </summary>
 internal sealed class LinuxSystemIntegrator : ISystemIntegrator
 {
+    /// <inheritdoc />
     public Task InstallAsync()
     {
         var exePath = GetExecutablePath();
@@ -61,6 +66,7 @@ internal sealed class LinuxSystemIntegrator : ISystemIntegrator
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task UninstallAsync()
     {
         var ignorePath = AppPaths.GetGlobalIgnorePath();
@@ -94,6 +100,7 @@ internal sealed class LinuxSystemIntegrator : ISystemIntegrator
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task UninstallDeepAsync()
     {
         var ignorePath = AppPaths.GetGlobalIgnorePath();

@@ -9,10 +9,22 @@ using FileTree.Core.Filtering;
 
 namespace FileTree.Core.Scanning
 {
-    internal class FileScanner : IFileScanner
+/// <summary>
+/// Implements tree scanning with limits, filtering, gitignore.
+/// Recursive, depth/node aware.
+/// </summary>
+/// <summary>
+/// Default implementation of <see cref="IFileScanner"/>. Handles recursive directory scanning with support for
+/// depth/width/node limits, .gitignore rules, custom filters (legacy/new), hidden files, empty folder pruning.
+/// Uses stack-based Enter/Exit for local .filetreeignore inheritance.
+/// </summary>
+internal class FileScanner : IFileScanner
     {
+        /// <summary>Total nodes scanned (for MaxNodes limit).</summary>
         private int _nodeCount;
+        /// <summary>Whether to prune empty folders post-scan.</summary>
         private bool _ignoreEmptyFolders;
+        /// <summary>Evaluator for inclusion rules (limits, filters, gitignore).</summary>
         private ScanInclusionEvaluator? _inclusionEvaluator;
 
     /// <summary>
@@ -66,6 +78,14 @@ namespace FileTree.Core.Scanning
             return rootNode;
         }
 
+        /// <summary>
+        /// Recursively scans directory contents, applying inclusion rules and limits.
+        /// Builds child FileNode, recurses dirs, prunes empty if configured.
+        /// </summary>
+        /// <param name="dirInfo">Current directory.</param>
+        /// <param name="parentNode">Parent node to add children to.</param>
+        /// <param name="currentDepth">Recursion depth.</param>
+        /// <param name="options">Scan options.</param>
         private void PerformScan(DirectoryInfo dirInfo, FileNode parentNode, int currentDepth, FileTreeOptions options)
         {
             // MaxDepth and MaxNodes checks are now handled by ScanInclusionEvaluator,

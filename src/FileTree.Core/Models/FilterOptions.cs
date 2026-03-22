@@ -2,6 +2,10 @@
 
 namespace FileTree.Core.Models;
 
+/// <summary>
+/// Filtering configuration.
+/// Modern: RulesSource gitignore-style. Legacy: ext/name lists (deprecated).
+/// </summary>
 public class FilterOptions
 {
     /// <summary>
