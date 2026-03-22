@@ -3,29 +3,35 @@ using CommandLine;
 using FileTree.Core.Services;
 using FileTree.Core.Utilities;
 using FileTree.CLI.SystemIntegrator;
+using TextCopy;
 
 namespace FileTree.CLI;
 
 internal class Program
 {
+    private const string PauseExitLongOption = "pause-exit";
+    private const char PauseExitShortOption = 'k';
+
     private static int Main(string[] args)
     {
-        EnsureGlobalIgnoreFileOnStartup(args);
-        EnsureSettingsFileOnStartup(args);
+        var argsList = args.ToList();
+        var pauseOnExit = ConsumeGlobalBooleanOption(argsList, PauseExitLongOption, PauseExitShortOption);
+        var effectiveArgs = argsList.ToArray();
 
-        if (TryHandleConfigCommand(args, out var configExitCode))
+        EnsureGlobalIgnoreFileOnStartup(effectiveArgs);
+        EnsureSettingsFileOnStartup(effectiveArgs);
+
+        if (TryHandleConfigCommand(effectiveArgs, out var configExitCode))
         {
-            Console.WriteLine("Press any key to exit...");
-            Console.ReadKey();
+            PauseIfNeeded(pauseOnExit);
             return configExitCode;
         }
 
-        if (IsHelpRequest(args))
+        if (IsHelpRequest(effectiveArgs))
         {
             var helpParser = new Parser(cfg => cfg.HelpWriter = Console.Out);
-            helpParser.ParseArguments<ScanCommandOptions, InstallCommandOptions, UninstallCommandOptions, UninstallDeepCommandOptions, PathsCommandOptions>(args);
-            Console.WriteLine("Press any key to exit...");
-            Console.ReadKey();
+            helpParser.ParseArguments<ScanCommandOptions, InstallCommandOptions, UninstallCommandOptions, UninstallDeepCommandOptions, PathsCommandOptions>(effectiveArgs);
+            PauseIfNeeded(pauseOnExit);
             return 0;
         }
 
@@ -35,7 +41,7 @@ internal class Program
             cfg.AutoHelp = false;
         });
 
-        var normalizedArgs = NormalizeBooleanFlags(args);
+        var normalizedArgs = NormalizeBooleanFlags(effectiveArgs);
 
         int res = parser
             .ParseArguments<ScanCommandOptions, InstallCommandOptions, UninstallCommandOptions, UninstallDeepCommandOptions, PathsCommandOptions>(normalizedArgs)
@@ -46,8 +52,7 @@ internal class Program
                 (UninstallDeepCommandOptions _) => RunUninstallDeepAsync().GetAwaiter().GetResult(),
                 (PathsCommandOptions _) => RunPaths(),
                 _ => 1);
-        Console.WriteLine("Press any key to exit...");
-        Console.ReadKey();
+        PauseIfNeeded(pauseOnExit);
 
         return res;
     }
@@ -69,14 +74,36 @@ internal class Program
     {
         var targetPath = state.GetTargetPath();
         var options = state.ToFileTreeOptions();
+        var shouldCopy = state.Copy == true;
+        var shouldPrint = state.Silent != true;
 
-        Console.WriteLine($"Scanning directory: {targetPath}");
-        Console.WriteLine($"Options: MaxDepth={options.MaxDepth}, Format={options.Format}, UseGitIgnore={options.UseGitIgnore}");
+        if (shouldPrint)
+        {
+            Console.WriteLine($"Scanning directory: {targetPath}");
+            if (state.ShowOptionsAll == true)
+            {
+                PrintAllOptions(state, options, targetPath);
+            }
+            else if (state.ShowOptions == true)
+            {
+                Console.WriteLine($"Options: MaxDepth={options.MaxDepth}, Format={options.Format}, UseGitIgnore={options.UseGitIgnore}");
+            }
+        }
 
         var service = new FileTreeService();
         try
         {
-            Console.WriteLine(service.Generate(targetPath, options));
+            var output = service.Generate(targetPath, options);
+            if (shouldPrint)
+            {
+                Console.WriteLine(output);
+            }
+
+            if (shouldCopy)
+            {
+                TryCopyToClipboard(output, shouldPrint);
+            }
+
             return 0;
         }
         catch (PathValidationException ex)
@@ -292,7 +319,11 @@ internal class Program
                name.Equals("ignore-empty", StringComparison.OrdinalIgnoreCase) ||
                name.Equals("hidden", StringComparison.OrdinalIgnoreCase) ||
                name.Equals("highlight-hidden", StringComparison.OrdinalIgnoreCase) ||
-               name.Equals("wait", StringComparison.OrdinalIgnoreCase);
+               name.Equals("wait", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("copy", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("silent", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("show-options", StringComparison.OrdinalIgnoreCase) ||
+               name.Equals("show-options-all", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsShortBooleanOption(string arg)
@@ -303,13 +334,96 @@ internal class Program
         }
 
         var option = arg[1];
-        return option == 'g' || option == 'h' || option == '!';
+        return option == 'g' || option == 'h' || option == '!' || option == 'c' || option == 's';
     }
 
     private static bool IsBooleanLiteral(string value)
     {
         return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, "false", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void TryCopyToClipboard(string output, bool shouldPrint)
+    {
+        try
+        {
+            ClipboardService.SetText(output ?? string.Empty);
+            if (shouldPrint)
+            {
+                Console.WriteLine("[Copied to clipboard]");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Warning: Could not copy output to clipboard: {ex.Message}");
+        }
+    }
+
+    private static void PauseIfNeeded(bool pauseOnExit)
+    {
+        if (!pauseOnExit)
+        {
+            return;
+        }
+
+        Console.WriteLine("Press any key to exit...");
+        Console.ReadKey();
+    }
+
+    private static bool ConsumeGlobalBooleanOption(List<string> args, string longName, char shortName)
+    {
+        var value = false;
+        for (var i = 0; i < args.Count; i++)
+        {
+            var arg = args[i];
+            var longToken = $"--{longName}";
+            var shortToken = $"-{shortName}";
+
+            if (string.Equals(arg, longToken, StringComparison.OrdinalIgnoreCase))
+            {
+                value = true;
+                args.RemoveAt(i);
+                i--;
+                continue;
+            }
+
+            if (arg.StartsWith($"{longToken}=", StringComparison.OrdinalIgnoreCase))
+            {
+                var raw = arg.Substring(longToken.Length + 1);
+                if (IsBooleanLiteral(raw))
+                {
+                    value = string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase);
+                }
+
+                args.RemoveAt(i);
+                i--;
+                continue;
+            }
+
+            if (string.Equals(arg, shortToken, StringComparison.OrdinalIgnoreCase))
+            {
+                value = true;
+                args.RemoveAt(i);
+                i--;
+            }
+        }
+
+        return value;
+    }
+
+    private static void PrintAllOptions(ScanOptionsState state, FileTree.Core.Models.FileTreeOptions options, string targetPath)
+    {
+        Console.WriteLine(
+            "Options (all): " +
+            $"Path={targetPath}, MaxDepth={options.MaxDepth}, MaxWidth={options.MaxWidth}, MaxNodes={options.MaxNodes}, " +
+            $"Format={options.Format}, UseGitIgnore={options.UseGitIgnore}, SkipHidden={options.SkipHidden}, " +
+            $"HighlightHidden={options.HighlightHiddenFiles}, HiddenStyle={options.HiddenStyle}, " +
+            $"CollapseThreshold={options.CollapseThreshold}, CollapseKeepStart={options.CollapseKeepStart}, " +
+            $"CollapseKeepEnd={options.CollapseKeepEnd}, CollapseStyle={options.CollapseStyle}, CollapseFrom={options.CollapseFrom}, " +
+            $"IgnoreEmptyFolders={options.Filter.IgnoreEmptyFolders}, UseLocalFilterFiles={options.Filter.UseLocalFilterFiles}, " +
+            $"NoDefaultFilters={state.NoDefaultFilters ?? false}, NoAppGlobalIgnore={state.NoAppGlobalIgnore ?? false}, " +
+            $"NoLocalFilters={state.NoLocalFilters ?? false}, NoDefaultSettings={state.NoDefaultSettings ?? false}, " +
+            $"Copy={state.Copy == true}, Silent={state.Silent == true}, Wait={state.Wait == true}");
     }
 
     private static void EnsureGlobalIgnoreFileOnStartup(string[] args)
