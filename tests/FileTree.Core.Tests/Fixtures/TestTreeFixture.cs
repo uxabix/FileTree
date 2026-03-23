@@ -2,8 +2,14 @@
 
 namespace FileTree.Core.Tests.Fixtures;
 
+/// <summary>
+/// Fixture providing a standard test tree structure for formatter/scanner tests.
+/// Creates in-memory FileNode hierarchy with root/bin/src/docs/temp/config.
+/// </summary>
 public class TestTreeFixture
 {
+    /// <summary>Creates the test tree with known structure for assertions.</summary>
+    /// <returns>Root FileNode.</returns>
     public FileNode CreateTestTree()
     {
         // root/

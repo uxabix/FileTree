@@ -8,12 +8,20 @@ using System.IO;
 
 namespace FileTree.Core.Services;
 
+/// <summary>
+/// Main service orchestrating tree generation: scan -> process -> format.
+/// DI-friendly ctor for testing.
+/// </summary>
 public class FileTreeService : IFileTreeService
 {
     private readonly IFileScanner _scanner;
     private readonly TreeFormatterFactory _formatterFactory;
     private readonly IReadOnlyList<ITreeProcessor> _processors;
 
+    /// <summary>DI ctor.</summary>
+    /// <param name="scanner">Tree scanner.</param>
+    /// <param name="formatterFactory">Formatter selector.</param>
+    /// <param name="processors">Optional processors (default collapse).</param>
     internal FileTreeService(
         IFileScanner scanner,
         TreeFormatterFactory formatterFactory,
@@ -24,10 +32,12 @@ public class FileTreeService : IFileTreeService
         _processors = processors?.ToList() ?? new List<ITreeProcessor> { new CollapseProcessor() };
     }
 
+    /// <summary>Default ctor with built-in scanner/factory/collapse.</summary>
     public FileTreeService() : this(new FileScanner(), new TreeFormatterFactory())
     {
 
     }
+
 
     /// <summary>
     /// Generates a formatted file tree representation for the specified directory.

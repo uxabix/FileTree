@@ -7,6 +7,10 @@ using FileTree.CLI;
 namespace FileTree.CLI.SystemIntegrator;
 
 [SupportedOSPlatform("windows")]
+/// <summary>
+/// Windows-specific implementation: adds to user PATH, BAT/PowerShell shims/aliases, registry context menus (dirs/files/desktop/background, default/custom).
+/// Deep uninstall prompts/scans for entries. Broadcasts env changes.
+/// </summary>
 internal sealed class WindowsSystemIntegrator : ISystemIntegrator
 {
     private const string DirectoryMenuKey =
@@ -33,6 +37,7 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
     private const string DirectoryBackgroundMenuKeyCustom =
         @"Software\Classes\Directory\Background\shell\FileTreeCustom";
 
+    /// <inheritdoc />
     public Task InstallAsync()
     {
         var exePath = GetExecutablePath();
@@ -92,6 +97,7 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task UninstallAsync()
     {
         var exePath = GetExecutablePath();
@@ -154,6 +160,7 @@ internal sealed class WindowsSystemIntegrator : ISystemIntegrator
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task UninstallDeepAsync()
     {
         var exePath = GetExecutablePath();

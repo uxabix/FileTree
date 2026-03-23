@@ -9,6 +9,11 @@ using FileTree.Core.Models;
 
 namespace FileTree.Core.Scanning
 {
+    /// <summary>
+    /// Evaluates whether file system items should be included in the scan based on limits, filters, gitignore rules, hidden status, etc.
+    /// Supports hierarchical .filetreeignore files and legacy filter conversion.
+    /// Uses stack for local rules scope.
+    /// </summary>
     internal class ScanInclusionEvaluator
     {
         private readonly GitIgnoreRules? _gitIgnoreRules;
@@ -19,6 +24,7 @@ namespace FileTree.Core.Scanning
         private readonly List<List<string>> _localRulesStack = new();
         private readonly List<string> _baseFilterRules;
         private readonly bool _useLocalFilterFiles;
+        /// <summary>Name of local ignore file for directory-specific rules.</summary>
         private const string LocalIgnoreFileName = ".filetreeignore";
 
         /// <summary>
@@ -28,6 +34,8 @@ namespace FileTree.Core.Scanning
         /// <param name="options">File tree scanning options.</param>
         /// <param name="gitIgnoreRules">Optional .gitignore rules to apply.</param>
         /// <param name="filterRules">Optional custom filter rules to apply.</param>
+        /// <summary>Initializes evaluator with root path, options, and rules sources.</summary>
+        /// <remarks>Combines gitignore, custom rules, legacy filters. Builds initial filter rules.</remarks>
         public ScanInclusionEvaluator(
             string rootPath,
             FileTreeOptions options,
@@ -110,6 +118,11 @@ namespace FileTree.Core.Scanning
             return true;
         }
 
+        /// <summary>
+        /// Loads .filetreeignore from dir if exists, pushes to stack, rebuilds rules.
+        /// </summary>
+        /// <param name="dirInfo">Directory to check for local ignore.</param>
+        /// <returns>True if rules loaded/pushed.</returns>
         public bool EnterDirectory(DirectoryInfo dirInfo)
         {
             if (!_useLocalFilterFiles)
@@ -134,6 +147,8 @@ namespace FileTree.Core.Scanning
             return true;
         }
 
+        /// <summary>Pops local rules from stack if previously pushed, rebuilds effective rules.</summary>
+        /// <param name="hadRules">True if EnterDirectory loaded rules.</param>
         public void ExitDirectory(bool hadRules)
         {
             if (!hadRules)

@@ -9,6 +9,10 @@ namespace FileTree.Core.Filtering;
 /// Converts legacy FilterOptions properties to gitignore-style filtering rules.
 /// This ensures backward compatibility with code using the old filtering API.
 /// </summary>
+/// <summary>
+/// Converts legacy list-based FilterOptions to gitignore-style rules for compatibility.
+/// Generates patterns like "**/*.ext" or "!**/*name".
+/// </summary>
 internal static class LegacyFilterConverter
 {
     /// <summary>
@@ -26,6 +30,7 @@ internal static class LegacyFilterConverter
     /// Note: The order matters in gitignore. Include rules must come after exclude rules
     /// to properly negate them.
     /// </remarks>
+    /// <summary>Main conversion: lists to gitignore patterns.</summary>
     public static List<string> ConvertToGitIgnoreRules(FilterOptions options)
     {
         if (options == null)

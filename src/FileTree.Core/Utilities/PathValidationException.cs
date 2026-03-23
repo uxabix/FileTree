@@ -3,6 +3,10 @@ using System;
 /// <summary>
 /// Custom exception for path validation errors in FileTree scanning.
 /// </summary>
+/// <summary>
+/// Entry namespace for path validation errors.
+/// Contains PathErrorType enum and PathValidationException class.
+/// </summary>
 namespace FileTree.Core.Utilities
 {
     /// <summary>

@@ -1,5 +1,9 @@
 namespace FileTree.CLI.SystemIntegrator;
 
+/// <summary>
+/// No-operation integrator for unsupported OS.
+/// Prints "unsupported" message and completes.
+/// </summary>
 internal sealed class NoOpSystemIntegrator : ISystemIntegrator
 {
     public Task InstallAsync()

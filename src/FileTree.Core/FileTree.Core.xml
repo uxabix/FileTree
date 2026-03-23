@@ -1,0 +1,745 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>FileTree.Core</name>
+    </assembly>
+    <members>
+        <member name="T:FileTree.Core.Abstractions.IFileTreeService">
+            <summary>
+            Core tree generation service interface.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Abstractions.IFileTreeService.Generate(System.String,FileTree.Core.Models.FileTreeOptions)">
+            <summary>Main entrypoint: Generates formatted tree string.</summary>
+            <param name="rootPath">Root dir path (validated).</param>
+            <param name="options">Scan/format config.</param>
+            <returns>Formatted tree.</returns>
+            <exception cref="!:PathValidationException">Invalid/inaccessible path.</exception>
+            <exception cref="T:System.UnauthorizedAccessException">Scan access denied.</exception>
+        </member>
+        <member name="T:FileTree.Core.Filtering.FileFilter">
+            <summary>
+            Legacy file filter implementation using simple list-based filtering.
+            </summary>
+            <remarks>
+            This class is obsolete and maintained only for backward compatibility.
+            Use FilterRulesSource with gitignore-style rules instead.
+            This class will be removed in v2.0.0.
+            </remarks>
+        </member>
+        <member name="M:FileTree.Core.Filtering.FileFilter.#ctor(FileTree.Core.Models.FilterOptions)">
+            <summary>Initializes with filter options lists.</summary>
+            <param name="options">Lists of include/exclude.</param>
+        </member>
+        <member name="M:FileTree.Core.Filtering.FileFilter.ShouldIncludeFile(System.String,System.String)">
+            <summary>Include if in includeNames or not in excludes; checks extension if IncludeExtensions set.</summary>
+        </member>
+        <member name="M:FileTree.Core.Filtering.FileFilter.ShouldIncludeDirectory(System.String,System.String)">
+            <summary>Include if in includeNames or not in excludeNames (no extension logic).</summary>
+        </member>
+        <member name="T:FileTree.Core.Filtering.FilterContext">
+            <summary>
+            Context for filter operations: combines <see cref="T:FileTree.Core.Models.FilterOptions"/> with optional gitignore rules.
+            Passed to rule loaders/evaluators.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Filtering.FilterContext.#ctor(FileTree.Core.Models.FilterOptions,FileTree.Core.GitIgnore.GitIgnoreRules)">
+            <summary>Initializes with options and optional gitignore.</summary>
+        </member>
+        <member name="P:FileTree.Core.Filtering.FilterContext.Options">
+            <summary>Filter options from user input.</summary>
+        </member>
+        <member name="P:FileTree.Core.Filtering.FilterContext.GitIgnoreRules">
+            <summary>Loaded .gitignore rules if applicable.</summary>
+        </member>
+        <member name="T:FileTree.Core.Filtering.FilterRulesLoader">
+            <summary>
+            Loads filtering rules from multiple sources and combines them into a single ordered list.
+            Rules are applied in order of precedence: App global -> Default global -> Custom global -> Local config -> Inline rules.
+            </summary>
+            <summary>
+            Loads filter rules from various sources (app/global/local configs, inline) in precedence order.
+            Parses .filetreeignore files, combines into ordered list for gitignore matching.
+            Cross-platform home dir detection.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Filtering.FilterRulesLoader.LoadFilterRules(FileTree.Core.Models.FilterRulesSource)">
+            <summary>
+            Loads and combines filtering rules from all configured sources.
+            </summary>
+            <param name="source">Configuration specifying which rule sources to load.</param>
+            <returns>A list of combined rules in the correct order.</returns>
+            <summary>Loads rules from all sources in order, adding to list.</summary>
+        </member>
+        <member name="M:FileTree.Core.Filtering.FilterRulesLoader.GetDefaultGlobalConfigPath">
+            <summary>
+            Gets the default global configuration file path based on the operating system.
+            </summary>
+            <returns>Path to default global config, or null if home directory cannot be determined.</returns>
+        </member>
+        <member name="M:FileTree.Core.Filtering.FilterRulesLoader.GetUserHomeDirectory">
+            <summary>
+            Gets the user's home directory path in a cross-platform manner.
+            </summary>
+            <returns>User's home directory path, or null if it cannot be determined.</returns>
+        </member>
+        <member name="M:FileTree.Core.Filtering.FilterRulesLoader.LoadRulesFromFile(System.Collections.Generic.List{System.String},System.String)">
+            <summary>
+            Loads rules from a file and adds them to the provided GitIgnoreRules instance.
+            </summary>
+            <param name="rules">The rules list to add rules to.</param>
+            <param name="filePath">Path to the file containing rules.</param>
+            <exception cref="T:System.IO.FileNotFoundException">Thrown if the specified file does not exist.</exception>
+            <exception cref="T:System.IO.IOException">Thrown if an error occurs while reading the file.</exception>
+        </member>
+        <member name="T:FileTree.Core.Filtering.IFileFilter">
+            <summary>
+            Legacy filtering interface for file/dir inclusion decisions.
+            Used for backward compatibility with list-based filters.
+            New code should use gitignore-style FilterRulesSource.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Filtering.IFileFilter.ShouldIncludeFile(System.String,System.String)">
+            <summary>Decides if file should be included based on name/path lists.</summary>
+        </member>
+        <member name="M:FileTree.Core.Filtering.IFileFilter.ShouldIncludeDirectory(System.String,System.String)">
+            <summary>Decides if directory should be included based on name/path lists.</summary>
+        </member>
+        <member name="T:FileTree.Core.Filtering.LegacyFilterConverter">
+            <summary>
+            Converts legacy FilterOptions properties to gitignore-style filtering rules.
+            This ensures backward compatibility with code using the old filtering API.
+            </summary>
+            <summary>
+            Converts legacy list-based FilterOptions to gitignore-style rules for compatibility.
+            Generates patterns like "**/*.ext" or "!**/*name".
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Filtering.LegacyFilterConverter.ConvertToGitIgnoreRules(FileTree.Core.Models.FilterOptions)">
+             <summary>
+             Converts legacy filter options to gitignore-style rules.
+             </summary>
+             <param name="options">The FilterOptions containing legacy filter properties.</param>
+             <returns>A list of gitignore-style rule strings.</returns>
+             <remarks>
+             Conversion rules:
+             - ExcludeExtensions: Converts to "**/*{ext}" patterns
+             - ExcludeNames: Converts to "{name}" patterns
+             - IncludeExtensions: Converts to "*" (exclude all) followed by "!**/*{ext}" (except these)
+             - IncludeNames: Converts to "!{name}" (negation patterns)
+            
+             Note: The order matters in gitignore. Include rules must come after exclude rules
+             to properly negate them.
+             </remarks>
+             <summary>Main conversion: lists to gitignore patterns.</summary>
+        </member>
+        <member name="M:FileTree.Core.Filtering.LegacyFilterConverter.HasLegacyFilters(FileTree.Core.Models.FilterOptions)">
+            <summary>
+            Checks if the legacy filter properties contain any filtering rules.
+            </summary>
+            <param name="options">The FilterOptions to check.</param>
+            <returns>True if any legacy filter properties are configured, false otherwise.</returns>
+        </member>
+        <member name="M:FileTree.Core.Filtering.LegacyFilterConverter.NormalizeExtension(System.String)">
+            <summary>
+            Normalizes a file extension by ensuring it starts with a dot.
+            </summary>
+            <param name="extension">The extension to normalize (e.g., "txt" or ".txt").</param>
+            <returns>Normalized extension starting with a dot (e.g., ".txt").</returns>
+        </member>
+        <member name="T:FileTree.Core.Formatting.AsciiTreeFormatter">
+            <summary>
+            ASCII art tree formatter using | / \ - characters.
+            Compatible with all terminals.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Formatting.AsciiTreeFormatter.Format(FileTree.Core.Models.FileNode,FileTree.Core.Formatting.FormatContext)">
+            <summary>Formats tree using ASCII characters. Root printed first, then children with connectors.</summary>
+        </member>
+        <member name="M:FileTree.Core.Formatting.AsciiTreeFormatter.FormatNode(FileTree.Core.Models.FileNode,FileTree.Core.Formatting.FormatContext)">
+            <summary>Formats single node name, handling collapsed placeholders and hidden styling.</summary>
+        </member>
+        <member name="T:FileTree.Core.Formatting.CollapsePlaceholderFormatter">
+            <summary>
+            Formats placeholder strings for collapsed nodes based on <see cref="T:FileTree.Core.Models.CollapseStyle"/>: Simple "...", Count, ByExtension.
+            Called by formatters for IsCollapsedPlaceholder nodes.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Formatting.CollapsePlaceholderFormatter.Format(FileTree.Core.Models.FileNode,FileTree.Core.Formatting.FormatContext)">
+            <summary>Main entry: Builds text, adds Markdown backticks if needed.</summary>
+            <param name="node">Collapsed node with counts.</param>
+            <param name="context">Context for format-specific wrapping.</param>
+            <returns>Placeholder string.</returns>
+        </member>
+        <member name="M:FileTree.Core.Formatting.CollapsePlaceholderFormatter.BuildText(FileTree.Core.Models.FileNode,FileTree.Core.Models.FileTreeOptions)">
+            <summary>Builds core placeholder text based on style/counts/extension hint.</summary>
+            <param name="node">Node stats.</param>
+            <param name="options">Collapse style/options.</param>
+            <returns>Text like "... (3 files)" or "... (12 .cs)".</returns>
+        </member>
+        <member name="T:FileTree.Core.Formatting.FormatContext">
+            <summary>
+            Immutable context passed to formatters, providing access to <see cref="T:FileTree.Core.Models.FileTreeOptions"/>.
+            Enables format-specific options without passing options directly.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Formatting.FormatContext.#ctor(FileTree.Core.Models.FileTreeOptions)">
+            <summary>Creates context from options.</summary>
+            <param name="options">Formatting options.</param>
+        </member>
+        <member name="P:FileTree.Core.Formatting.FormatContext.Options">
+            <summary>Original options.</summary>
+        </member>
+        <member name="P:FileTree.Core.Formatting.FormatContext.Format">
+            <summary>Shortcut to <see cref="!:Options.Format"/>.</summary>
+        </member>
+        <member name="T:FileTree.Core.Formatting.ITreeFormatter">
+            <summary>
+            Contract for formatting a <see cref="T:FileTree.Core.Models.FileNode"/> tree into string representation.
+            Supports different output styles (ASCII, Unicode, Markdown).
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Formatting.ITreeFormatter.Format(FileTree.Core.Models.FileNode,FileTree.Core.Formatting.FormatContext)">
+            <summary>
+            Formats the tree hierarchy into a string.
+            </summary>
+            <param name="root">Root node of the tree.</param>
+            <param name="context">Formatting context (options, styles).</param>
+            <returns>Formatted tree string ready for output.</returns>
+        </member>
+        <member name="T:FileTree.Core.Formatting.MarkdownTreeFormatter">
+            <summary>
+            Markdown list-style tree formatter.
+            Indented bullet-less list with / for dirs.
+            Ideal for GitHub README.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Formatting.MarkdownTreeFormatter.Format(FileTree.Core.Models.FileNode,FileTree.Core.Formatting.FormatContext)">
+            <summary>Formats tree as indented Markdown list. Recursive write.</summary>
+        </member>
+        <member name="M:FileTree.Core.Formatting.MarkdownTreeFormatter.WriteNode(FileTree.Core.Models.FileNode,System.Text.StringBuilder,System.Int32,FileTree.Core.Formatting.FormatContext)">
+            <summary>Recursively writes node at depth, with 2-space indent.</summary>
+            <param name="node">Current node.</param>
+            <param name="sb">Builder to append to.</param>
+            <param name="depth">Indent level.</param>
+            <param name="context">Formatting context.</param>
+        </member>
+        <member name="M:FileTree.Core.Formatting.MarkdownTreeFormatter.FormatNode(FileTree.Core.Models.FileNode,FileTree.Core.Formatting.FormatContext)">
+            <summary>Formats node name: dir / suffix, hidden styling, collapsed placeholders.</summary>
+        </member>
+        <member name="T:FileTree.Core.Formatting.NodeNameStyler">
+            <summary>
+            Utility for styling node names: applies hidden file markers (prefix/suffix/minimal) based on options.
+            Used by all tree formatters.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Formatting.NodeNameStyler.Apply(System.String,FileTree.Core.Models.FileNode,FileTree.Core.Formatting.FormatContext)">
+            <summary>Applies hidden styling if enabled and node is hidden.</summary>
+            <param name="name">Base name.</param>
+            <param name="node">Node metadata.</param>
+            <param name="context">Context for style.</param>
+            <returns>Styled name.</returns>
+        </member>
+        <member name="M:FileTree.Core.Formatting.NodeNameStyler.ApplyHiddenStyle(System.String,FileTree.Core.Formatting.FormatContext)">
+            <summary>Applies the configured hidden style to name.</summary>
+        </member>
+        <member name="T:FileTree.Core.Formatting.TreeFormatterFactory">
+            <summary>
+            Factory for selecting concrete <see cref="T:FileTree.Core.Formatting.ITreeFormatter"/> implementations based on <see cref="T:FileTree.Core.Models.OutputFormat"/>.
+            Simple switch, extensible for new formats.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Formatting.TreeFormatterFactory.Create(FileTree.Core.Models.OutputFormat)">
+            <summary>Creates formatter for the given format.</summary>
+            <param name="format">Desired output format.</param>
+            <returns>Appropriate formatter instance.</returns>
+            <exception cref="T:System.NotSupportedException">Unknown format.</exception>
+        </member>
+        <member name="T:FileTree.Core.Formatting.UnicodeTreeFormatter">
+            <summary>
+            Unicode box-drawing tree formatter (│ ├ └ ─). Pretty terminal output.
+            Similar structure to Ascii, different chars.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Formatting.UnicodeTreeFormatter.Format(FileTree.Core.Models.FileNode,FileTree.Core.Formatting.FormatContext)">
+            <summary>Formats tree using Unicode box characters. Root first, then children.</summary>
+        </member>
+        <member name="M:FileTree.Core.Formatting.UnicodeTreeFormatter.FormatNode(FileTree.Core.Models.FileNode,FileTree.Core.Formatting.FormatContext)">
+            <summary>Formats node name, delegating to placeholder/styler.</summary>
+        </member>
+        <member name="T:FileTree.Core.GitIgnore.GitIgnoreParser">
+            <summary>
+            Factory methods for <see cref="T:FileTree.Core.GitIgnore.GitIgnoreRules"/> from empty, lines, or .gitignore file.
+            Handles parsing, comment stripping, trimming.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.GitIgnore.GitIgnoreParser.Create">
+            <summary>Creates empty rules instance.</summary>
+        </member>
+        <member name="M:FileTree.Core.GitIgnore.GitIgnoreParser.FromLines(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>Parses lines, ignores empty/comments, adds to new rules.</summary>
+        </member>
+        <member name="M:FileTree.Core.GitIgnore.GitIgnoreParser.FromFile(System.String)">
+            <summary>Loads from file path, reads lines then FromLines.</summary>
+        </member>
+        <member name="T:FileTree.Core.GitIgnore.GitIgnoreRules">
+            <summary>
+            Wrapper around Ignore library for gitignore-style path matching.
+            Fluent Add rules, query IsIgnored/Filter.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.GitIgnore.GitIgnoreRules.#ctor">
+            <summary>Initializes empty matcher.</summary>
+        </member>
+        <member name="M:FileTree.Core.GitIgnore.GitIgnoreRules.Add(System.String)">
+            <summary>Adds single rule, fluent.</summary>
+            <param name="rule">Pattern.</param>
+        </member>
+        <member name="M:FileTree.Core.GitIgnore.GitIgnoreRules.Add(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>Adds rules enumerable, cleans empty/comments, fluent.</summary>
+        </member>
+        <member name="M:FileTree.Core.GitIgnore.GitIgnoreRules.Filter(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>Filters paths not ignored.</summary>
+        </member>
+        <member name="M:FileTree.Core.GitIgnore.GitIgnoreRules.IsIgnored(System.String)">
+            <summary>Tests if path ignored.</summary>
+        </member>
+        <member name="F:FileTree.Core.Models.CollapseStyle.Simple">
+            <summary>... placeholder.</summary>
+        </member>
+        <member name="F:FileTree.Core.Models.CollapseStyle.Count">
+            <summary>... (5 more) with count.</summary>
+        </member>
+        <member name="F:FileTree.Core.Models.CollapseStyle.ByExtension">
+            <summary>... [.cs x12] by extension.</summary>
+        </member>
+        <member name="T:FileTree.Core.Models.FileNode">
+            <summary>
+            Represents a node in the file tree.
+            Leaf for files, container for dirs. Supports collapse placeholders.
+            Immutable except children/collapsed props.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Models.FileNode.#ctor(System.String,System.String,System.Boolean,System.Boolean)">
+            <summary>Constructor.</summary>
+            <param name="name">Basename.</param>
+            <param name="fullPath">Absolute path.</param>
+            <param name="isDirectory">Dir or file.</param>
+            <param name="isHidden">Hidden flag.</param>
+        </member>
+        <member name="P:FileTree.Core.Models.FileNode.Name">
+            <summary>Basename (no path).</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileNode.FullPath">
+            <summary>Absolute path.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileNode.IsDirectory">
+            <summary>True if directory.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileNode.IsHidden">
+            <summary>True if hidden.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileNode.Children">
+            <summary>Child nodes (read-only).</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileNode.IsCollapsedPlaceholder">
+            <summary>True if placeholder for collapsed children.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileNode.CollapsedCount">
+            <summary>Total hidden children count.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileNode.CollapsedFileCount">
+            <summary>Hidden file children count.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileNode.CollapsedFolderCount">
+            <summary>Hidden folder children count.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileNode.CollapsedExtensionHint">
+            <summary>Extension hint for ByExtension collapse.</summary>
+        </member>
+        <member name="M:FileTree.Core.Models.FileNode.AddChild(FileTree.Core.Models.FileNode)">
+            <summary>Adds child (during scan).</summary>
+            <param name="child">Child node.</param>
+        </member>
+        <member name="M:FileTree.Core.Models.FileNode.RemoveChild(FileTree.Core.Models.FileNode)">
+            <summary>Removes child (post-filter).</summary>
+            <param name="child">Child to remove.</param>
+        </member>
+        <member name="T:FileTree.Core.Models.FileTreeOptions">
+            <summary>
+            Core configuration for tree generation.
+            Controls scanning limits, filtering, formatting, collapse.
+            Defaults favor reasonable output; -1/-1 unlimited.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.MaxDepth">
+            <summary>Max recursion depth. -1 unlimited (default).</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.MaxWidth">
+            <summary>Max siblings per dir. -1 unlimited (default).</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.MaxNodes">
+            <summary>Global node cap. -1 unlimited (default).</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.UseGitIgnore">
+            <summary>Load/apply .gitignore rules from root. Default: false.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.SkipHidden">
+            <summary>Exclude hidden files/dirs. Default: false.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.HighlightHiddenFiles">
+            <summary>Special style for hidden (if not skipped). Default: true.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.HiddenStyle">
+            <summary>Hidden marker style. Default: Prefix.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.Format">
+            <summary>Tree render style (Ascii/Markdown/Unicode). Default: Ascii.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.Filter">
+            <summary>Filtering config (rules, legacy).</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.CollapseThreshold">
+            <summary>Collapse dirs > N children. Null=auto.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.CollapseKeepStart">
+            <summary>First N children to show in collapsed. Default: 1.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.CollapseKeepEnd">
+            <summary>Last N children to show in collapsed. Default: 1.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.CollapseStyle">
+            <summary>Placeholder style. Default: Count.</summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FileTreeOptions.CollapseFrom">
+            <summary>Start collapsing from this depth (1=root children). Default: 1.</summary>
+        </member>
+        <member name="T:FileTree.Core.Models.FilterOptions">
+            <summary>
+            Filtering configuration.
+            Modern: RulesSource gitignore-style. Legacy: ext/name lists (deprecated).
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FilterOptions.RulesSource">
+            <summary>
+            Source configuration for gitignore-style filtering rules.
+            This is the recommended way to configure filtering.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FilterOptions.IgnoreEmptyFolders">
+            <summary>
+            Skip folders that have no children after filtering is applied.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FilterOptions.UseLocalFilterFiles">
+            <summary>
+            Whether to load local .filetreeignore files during scanning.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FilterOptions.IncludeExtensions">
+            <summary>
+            Include only these extensions if list is not empty.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FilterOptions.ExcludeExtensions">
+            <summary>
+            Extensions to always exclude.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FilterOptions.IncludeNames">
+            <summary>
+            File/directory names to include always.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FilterOptions.ExcludeNames">
+            <summary>
+            File/directory names to exclude.
+            </summary>
+        </member>
+        <member name="T:FileTree.Core.Models.FilterRulesSource">
+            <summary>
+            Defines the sources from which filtering rules should be loaded.
+            Rules are applied in order: Global config -> Local config -> Inline rules,
+            with later rules taking precedence over earlier ones.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FilterRulesSource.AppGlobalConfigPath">
+            <summary>
+            Path to the app-level global filter configuration file (e.g., FileTree.ignore in the app directory).
+            If null, no app-level global config will be loaded.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FilterRulesSource.UseAppGlobalConfig">
+            <summary>
+            Whether to load the app-level global configuration file.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FilterRulesSource.InlineRules">
+            <summary>
+            Filtering rules provided directly (e.g., from CLI arguments).
+            These rules use gitignore-style syntax.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FilterRulesSource.GlobalConfigPath">
+            <summary>
+            Path to a global filter configuration file.
+            If null, only the default global config will be used (if enabled).
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FilterRulesSource.LocalConfigPath">
+            <summary>
+            Path to a local filter configuration file (e.g., .filetreeignore in the working directory).
+            If null, no local config file will be loaded.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Models.FilterRulesSource.UseDefaultGlobalConfig">
+            <summary>
+            Whether to load the default global configuration file from the user's home directory.
+            Default location: ~/.filetreeignore (Linux/Mac) or %USERPROFILE%\.filetreeignore (Windows)
+            </summary>
+        </member>
+        <member name="T:FileTree.Core.Models.HiddenStyle">
+            <summary>
+            Style for marking hidden nodes.
+            </summary>
+        </member>
+        <member name="F:FileTree.Core.Models.HiddenStyle.Prefix">
+            <summary>[hidden] prefix.</summary>
+        </member>
+        <member name="F:FileTree.Core.Models.HiddenStyle.Suffix">
+            <summary>(hidden) suffix.</summary>
+        </member>
+        <member name="F:FileTree.Core.Models.HiddenStyle.Minimal">
+            <summary>* minimal marker.</summary>
+        </member>
+        <member name="T:FileTree.Core.Models.OutputFormat">
+            <summary>
+            Tree rendering format.
+            </summary>
+        </member>
+        <member name="F:FileTree.Core.Models.OutputFormat.Ascii">
+            <summary>ASCII box chars (| / \ -).</summary>
+        </member>
+        <member name="F:FileTree.Core.Models.OutputFormat.Markdown">
+            <summary>Markdown tree list.</summary>
+        </member>
+        <member name="F:FileTree.Core.Models.OutputFormat.Unicode">
+            <summary>Unicode tree chars (│ ├ └ ─).</summary>
+        </member>
+        <member name="T:FileTree.Core.Processing.CollapseProcessor">
+            <summary>
+            Default <see cref="T:FileTree.Core.Processing.ITreeProcessor"/> implementing tree collapse logic.
+            Recursively clones tree, replacing large dirs with placeholders.
+            Supports KeepStart/KeepEnd, from depth, different styles.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Processing.CollapseProcessor.Process(FileTree.Core.Models.FileNode,FileTree.Core.Models.FileTreeOptions)">
+            <summary>Processes tree if threshold set, using recursive clone/collapse.</summary>
+        </member>
+        <member name="T:FileTree.Core.Processing.ITreeProcessor">
+            <summary>
+            Post-scan tree processor pipeline interface.
+            Transforms tree (e.g., collapse nodes, prune, etc.) based on options.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Processing.ITreeProcessor.Process(FileTree.Core.Models.FileNode,FileTree.Core.Models.FileTreeOptions)">
+            <summary>Processes/transforms the tree root.</summary>
+            <param name="root">Input tree.</param>
+            <param name="options">Processing options (threshold etc.).</param>
+            <returns>Processed tree (may mutate/replace nodes).</returns>
+        </member>
+        <member name="T:FileTree.Core.Scanning.FileScanner">
+            <summary>
+            Implements tree scanning with limits, filtering, gitignore.
+            Recursive, depth/node aware.
+            </summary>
+            <summary>
+            Default implementation of <see cref="T:FileTree.Core.Scanning.IFileScanner"/>. Handles recursive directory scanning with support for
+            depth/width/node limits, .gitignore rules, custom filters (legacy/new), hidden files, empty folder pruning.
+            Uses stack-based Enter/Exit for local .filetreeignore inheritance.
+            </summary>
+        </member>
+        <member name="F:FileTree.Core.Scanning.FileScanner._nodeCount">
+            <summary>Total nodes scanned (for MaxNodes limit).</summary>
+        </member>
+        <member name="F:FileTree.Core.Scanning.FileScanner._ignoreEmptyFolders">
+            <summary>Whether to prune empty folders post-scan.</summary>
+        </member>
+        <member name="F:FileTree.Core.Scanning.FileScanner._inclusionEvaluator">
+            <summary>Evaluator for inclusion rules (limits, filters, gitignore).</summary>
+        </member>
+        <member name="M:FileTree.Core.Scanning.FileScanner.Scan(System.String,FileTree.Core.Models.FileTreeOptions)">
+            <summary>
+            Scans the directory tree starting from the specified root path.
+            </summary>
+            <param name="rootPath">Validated full path to the root directory (caller must validate existence).</param>
+            <param name="options">Scanning options.</param>
+            <returns>FileNode representing the scanned tree.</returns>
+        </member>
+        <member name="M:FileTree.Core.Scanning.FileScanner.PerformScan(System.IO.DirectoryInfo,FileTree.Core.Models.FileNode,System.Int32,FileTree.Core.Models.FileTreeOptions)">
+            <summary>
+            Recursively scans directory contents, applying inclusion rules and limits.
+            Builds child FileNode, recurses dirs, prunes empty if configured.
+            </summary>
+            <param name="dirInfo">Current directory.</param>
+            <param name="parentNode">Parent node to add children to.</param>
+            <param name="currentDepth">Recursion depth.</param>
+            <param name="options">Scan options.</param>
+        </member>
+        <member name="T:FileTree.Core.Scanning.HiddenFileDetector">
+            <summary>
+            Cross-platform detector for hidden files and directories.
+            On Windows, checks the Hidden file attribute.
+            On Unix-like systems, checks for dot-prefix in name (e.g., .git).
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Scanning.HiddenFileDetector.IsHidden(System.IO.FileSystemInfo)">
+            <summary>
+            Determines if the specified file system item is hidden.
+            </summary>
+            <param name="item">The file or directory information to check.</param>
+            <returns>
+            <c>true</c> if the item is hidden; otherwise, <c>false</c>.
+            </returns>
+            <remarks>
+            Platform-specific logic:
+            - Windows: Checks <see cref="F:System.IO.FileAttributes.Hidden"/>.
+            - Other OS: Checks if name starts with &apos;.&apos;.
+            </remarks>
+        </member>
+        <member name="T:FileTree.Core.Scanning.IFileScanner">
+            <summary>
+            Defines the scanning contract for building file tree structures from directories.
+            Implementations handle recursion, limits, filtering during scan.
+            Note: Named IFileScanner internally, but file is IFileTreeScanner.cs.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Scanning.IFileScanner.Scan(System.String,FileTree.Core.Models.FileTreeOptions)">
+            <summary>
+            Scans the directory tree starting from <paramref name="rootPath"/>, building a <see cref="T:FileTree.Core.Models.FileNode"/> hierarchy.
+            Applies scanning limits, hidden/gitignore checks based on <paramref name="options"/>.
+            </summary>
+            <param name="rootPath">Absolute path to root directory.</param>
+            <param name="options">Scan configuration (depth, width, filters).</param>
+            <returns>Root <see cref="T:FileTree.Core.Models.FileNode"/> representing the tree.</returns>
+            <exception cref="T:System.UnauthorizedAccessException">Access denied during scan.</exception>
+        </member>
+        <member name="T:FileTree.Core.Scanning.ScanInclusionEvaluator">
+            <summary>
+            Evaluates whether file system items should be included in the scan based on limits, filters, gitignore rules, hidden status, etc.
+            Supports hierarchical .filetreeignore files and legacy filter conversion.
+            Uses stack for local rules scope.
+            </summary>
+        </member>
+        <member name="F:FileTree.Core.Scanning.ScanInclusionEvaluator.LocalIgnoreFileName">
+            <summary>Name of local ignore file for directory-specific rules.</summary>
+        </member>
+        <member name="M:FileTree.Core.Scanning.ScanInclusionEvaluator.#ctor(System.String,FileTree.Core.Models.FileTreeOptions,FileTree.Core.GitIgnore.GitIgnoreRules,System.Collections.Generic.IReadOnlyList{System.String})">
+            <summary>
+            Creates a new instance of ScanInclusionEvaluator.
+            </summary>
+            <param name="rootPath">The root directory path being scanned.</param>
+            <param name="options">File tree scanning options.</param>
+            <param name="gitIgnoreRules">Optional .gitignore rules to apply.</param>
+            <param name="filterRules">Optional custom filter rules to apply.</param>
+            <summary>Initializes evaluator with root path, options, and rules sources.</summary>
+            <remarks>Combines gitignore, custom rules, legacy filters. Builds initial filter rules.</remarks>
+        </member>
+        <member name="M:FileTree.Core.Scanning.ScanInclusionEvaluator.ShouldInclude(System.IO.FileSystemInfo,System.Int32,System.Int32)">
+            <summary>
+            Determines whether a file or directory should be included in the scan results.
+            </summary>
+            <param name="item">The file or directory to evaluate.</param>
+            <param name="currentDepth">Current depth in the directory tree.</param>
+            <param name="currentNodeCount">Current number of nodes scanned.</param>
+            <returns>True if the item should be included, false otherwise.</returns>
+        </member>
+        <member name="M:FileTree.Core.Scanning.ScanInclusionEvaluator.EnterDirectory(System.IO.DirectoryInfo)">
+            <summary>
+            Loads .filetreeignore from dir if exists, pushes to stack, rebuilds rules.
+            </summary>
+            <param name="dirInfo">Directory to check for local ignore.</param>
+            <returns>True if rules loaded/pushed.</returns>
+        </member>
+        <member name="M:FileTree.Core.Scanning.ScanInclusionEvaluator.ExitDirectory(System.Boolean)">
+            <summary>Pops local rules from stack if previously pushed, rebuilds effective rules.</summary>
+            <param name="hadRules">True if EnterDirectory loaded rules.</param>
+        </member>
+        <member name="T:FileTree.Core.Services.FileTreeService">
+            <summary>
+            Main service orchestrating tree generation: scan -> process -> format.
+            DI-friendly ctor for testing.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Services.FileTreeService.#ctor(FileTree.Core.Scanning.IFileScanner,FileTree.Core.Formatting.TreeFormatterFactory,System.Collections.Generic.IEnumerable{FileTree.Core.Processing.ITreeProcessor})">
+            <summary>DI ctor.</summary>
+            <param name="scanner">Tree scanner.</param>
+            <param name="formatterFactory">Formatter selector.</param>
+            <param name="processors">Optional processors (default collapse).</param>
+        </member>
+        <member name="M:FileTree.Core.Services.FileTreeService.#ctor">
+            <summary>Default ctor with built-in scanner/factory/collapse.</summary>
+        </member>
+        <member name="M:FileTree.Core.Services.FileTreeService.Generate(System.String,FileTree.Core.Models.FileTreeOptions)">
+            <summary>
+            Generates a formatted file tree representation for the specified directory.
+            </summary>
+            <param name="rootPath">Path to the root directory to scan. Must be a valid, accessible directory.</param>
+            <param name="options">Scanning and formatting options.</param>
+            <returns>Formatted tree string.</returns>
+            <exception cref="T:FileTree.Core.Utilities.PathValidationException">Thrown if rootPath is invalid, not a directory, or inaccessible.</exception>
+            <exception cref="T:System.UnauthorizedAccessException">Thrown if scanning encounters permission issues inside dirs.</exception>
+        </member>
+        <member name="T:FileTree.Core.Utilities.PathErrorType">
+            <summary>
+            Represents different types of path validation errors.
+            </summary>
+        </member>
+        <member name="F:FileTree.Core.Utilities.PathErrorType.InvalidFormat">
+            <summary>
+            The path has invalid characters or format.
+            </summary>
+        </member>
+        <member name="F:FileTree.Core.Utilities.PathErrorType.NotFound">
+            <summary>
+            The path does not exist.
+            </summary>
+        </member>
+        <member name="F:FileTree.Core.Utilities.PathErrorType.NotDirectory">
+            <summary>
+            The path exists but is a file, not a directory.
+            </summary>
+        </member>
+        <member name="F:FileTree.Core.Utilities.PathErrorType.AccessDenied">
+            <summary>
+            No permission to access the directory.
+            </summary>
+        </member>
+        <member name="T:FileTree.Core.Utilities.PathValidationException">
+            <summary>
+            Exception thrown when directory path validation fails.
+            Provides detailed error type and path for user-friendly messages.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Utilities.PathValidationException.ErrorType">
+            <summary>
+            Gets the error type.
+            </summary>
+        </member>
+        <member name="P:FileTree.Core.Utilities.PathValidationException.Path">
+            <summary>
+            Gets the full normalized path that failed validation.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Utilities.PathValidationException.#ctor(System.String,FileTree.Core.Utilities.PathErrorType,System.String)">
+            <summary>
+            Initializes a new instance with error type and path.
+            </summary>
+        </member>
+        <member name="M:FileTree.Core.Utilities.PathValidationException.#ctor(System.String,FileTree.Core.Utilities.PathErrorType,System.String,System.Exception)">
+            <summary>
+            Initializes with inner exception (e.g. ArgumentException from Path.GetFullPath).
+            </summary>
+        </member>
+    </members>
+</doc>
